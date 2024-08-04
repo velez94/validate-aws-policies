@@ -1,0 +1,37 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "validate_aws_policies"
+version = "2.0.0"
+authors = [
+    { name = "Alejandro Velez", email = "avelez@labvel.io" },
+]
+description = "A tool for scan policies using AWS access Analyzer API and create reports "
+readme = "README.md"
+license = { file = "LICENSE" }
+requires-python = ">=3.8"
+dependencies = [
+    "colorama >= 0.4.6",
+    "pdfkit>= 1.0.0",
+    "json2html>=1.3.0",
+    "argparse>=1.4.0",
+    "zipp>= 3.19.2",
+    "boto3>=1.34.138",
+    "colorama>=0.4.6",
+    "argcomplete>=3.4.0",
+]
+
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: Apache Software License",
+    "Operating System :: OS Independent",
+]
+
+[project.urls]
+"Homepage" = "https://github.com/pypa/sampleproject"
+"Bug Tracker" = "https://github.com/pypa/sampleproject/issues"
+
+[project.scripts]
+validate-aws-policies = "validate_aws_policies.validate_policies:main"

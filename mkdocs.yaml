@@ -1,0 +1,9 @@
+site_name: 'AWS Validate Policies Tool'
+
+nav:
+  - Home: index.md
+  #- Changelog: CHANGELOG.md
+
+
+theme:
+  name: material
