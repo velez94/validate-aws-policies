@@ -47,22 +47,23 @@ $ pip install --upgrade validate-aws-policies
 # Instructions
 
  ```commandline
- validate-aws-policies -h 
-  
-usage: validate-aws-policies [-h] [-c CI] [-u UPLOAD_REPORT] [-b BUCKET_NAME] [-d DIRECTORY_POLICIES_PATH] [-p PROFILE]
+ validate-aws-policies -h
+usage: validate-aws-policies [-h] [-c] [-u UPLOAD_REPORT] [-b] [-d DIRECTORY_POLICIES_PATH] [-p PROFILE] [-z] [-cp] [-v]
 
-optional arguments:
+options:
   -h, --help            show this help message and exit
-  -c CI, --ci CI        Run into pipeline if it is present
+  -c, --ci              Run into pipeline if it's present
   -u UPLOAD_REPORT, --upload_report UPLOAD_REPORT
                         Upload reports to s3 bucket
-  -b BUCKET_NAME, --bucket_name BUCKET_NAME
-                        Use this flag for setting the bucket name if --upload_report is present.
+  -b, --bucket_name     Use this flag for setting the bucket tool if --upload_report is present.
   -d DIRECTORY_POLICIES_PATH, --directory_policies_path DIRECTORY_POLICIES_PATH
-                        Policy paths
+                        Path where Policies are defined in json format
   -p PROFILE, --profile PROFILE
                         AWS cli profile for Access Analyzer Api
-
+  -z, --zip_reports     Set in True if you want to create a zip file for reports
+  -cp, --create_pdf_reports
+                        Set it if you want to create a pdf report, this need wkhtmltopdf file for reports
+  -v, --version         Print the package version
 ```
 # Examples 
 

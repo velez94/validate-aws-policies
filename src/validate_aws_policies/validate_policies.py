@@ -51,14 +51,14 @@ def main() -> int:
     parser.add_argument(
         "-z",
         "--zip_reports",
-        help="Set in True if you want create a zip file for reports",
+        help="Set in True if you want to create a zip file for reports",
         action="store_true",
     )
 
     parser.add_argument(
         "-cp",
         "--create_pdf_reports",
-        help="Set it  if you want create a pdf report, this need wkhtmltopdf file for reports",
+        help="Set it  if you want to create a pdf report, this need wkhtmltopdf file for reports",
         action="store_true",
     )
     # create version argument
