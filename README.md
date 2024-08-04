@@ -10,11 +10,15 @@ Setup AWS Cli profile for interacting with IAM access analyzer API using IAM or 
 - python >= 3.8
 
 ## Install
+
+```commandline
+$ pip install --upgrade validate-aws-policies
+```
 ### From AWS CodeArtifacts repository
 
 >You must have a user into AWS account Sophos Organization, it could be for projects, products, or IT internal Organizations.
 > Before create AWS CLI profile using [AWS IAM Identity Center (SSO)](https://docs.aws.amazon.com/cli/latest/userguide/sso-configure-profile-token.html) or IAM.
-{.is-info}
+
 
 1. Configure your pip cli for download package from private CodeArtifacts repository 
 
@@ -38,12 +42,6 @@ Add a pip.ini (Windows) or pip.conf (Mac/Linux) file to your virtualenv
 index-url=https://pkgs.dev.azure.com/<organizations>/.../_packaging/.../pypi/simple/
 
 ```
-Finally, install Packages.
-
-```commandline
-$ pip install --upgrade validate-aws-policies
-```
-
 # Instructions
 
 ```commandline 
