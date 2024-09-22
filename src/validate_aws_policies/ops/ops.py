@@ -10,6 +10,7 @@ import pdfkit
 from botocore.exceptions import ClientError
 from colorama import Fore
 from json2html import json2html
+from psutil.tests.test_process_all import proc_info
 
 
 def read_policies(file_path):
@@ -103,8 +104,10 @@ def upload_file(file_name, bucket, key="reports"):
     try:
         response = s3_client.upload_file(file_name, bucket, Key=key)
         logging.info(response)
+        print(f"{Fore.GREEN} ✨ The reports was uploaded" )
     except ClientError as e:
         logging.error(e)
+        print(f"{Fore.RED} ⚠️ Error uploading the reports" )
         return False
     return True
 

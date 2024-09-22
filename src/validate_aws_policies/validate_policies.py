@@ -32,12 +32,13 @@ def main() -> int:
     parser.add_argument(
         "-c", "--ci", help="Run into pipeline if it's present", action="store_true"
     )
-    parser.add_argument("-u", "--upload_report", help="Upload reports to s3 bucket")
+    parser.add_argument("-u", "--upload_report",
+                        help="Upload reports to s3 bucket",
+                        action="store_true")
     parser.add_argument(
         "-b",
         "--bucket_name",
-        help="Use this flag for setting the bucket tool if --upload_report is present.",
-        action="store_true",
+        help="Use this flag for setting the bucket tool if --upload_report is present."
     )
     parser.add_argument(
         "-d",
