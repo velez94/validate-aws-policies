@@ -27,7 +27,7 @@ class PolicyValidator:
         Args:
             config: Configuration dictionary containing:
                 - policies_path: Path to directory containing policy files
-                - format: Output format (json, text, html, md/markdown)
+                - format: Output format (json, text, html, md/markdown, xml/junit)
                 - output: Optional output file path
                 - dry_run: Whether to skip report generation and uploads
                 - upload_report: Whether to upload reports to S3
@@ -181,7 +181,7 @@ class PolicyValidator:
         """
         Generate report files based on configuration.
 
-        Supports HTML, Markdown, and ZIP formats. Respects dry-run mode.
+        Supports HTML, Markdown, XML/JUnit, and ZIP formats. Respects dry-run mode.
 
         Args:
             results: List of validation results
@@ -198,6 +198,8 @@ class PolicyValidator:
             report_files.append(html_file)
             md_file = self.report_generator.create_markdown_report(results)
             report_files.append(md_file)
+            xml_file = self.report_generator.create_junit_xml_report(results)
+            report_files.append(xml_file)
         # Generate HTML report if format is html
         elif format_type == "html":
             html_file = self.report_generator.create_html_report(results)
@@ -206,6 +208,10 @@ class PolicyValidator:
         elif format_type in ["md", "markdown"]:
             md_file = self.report_generator.create_markdown_report(results)
             report_files.append(md_file)
+        # Generate JUnit XML report if format is xml or junit
+        elif format_type in ["xml", "junit"]:
+            xml_file = self.report_generator.create_junit_xml_report(results)
+            report_files.append(xml_file)
 
         # Create ZIP archive if requested
         if self.config.get("zip") and report_files:

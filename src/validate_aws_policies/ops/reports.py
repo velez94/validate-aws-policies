@@ -568,3 +568,159 @@ Generated: {timestamp.strftime('%Y-%m-%d %H:%M:%S')}
         except Exception as e:
             logger.error(f"Failed to create ZIP archive: {e}")
             raise OSError(f"Failed to create ZIP archive: {e}") from e
+    def create_junit_xml_report(self, results: List[Dict[str, Any]]) -> Path:
+        """
+        Create JUnit XML report from validation results for CI/CD integration.
+
+        The XML format follows the JUnit schema compatible with Jenkins, GitLab CI,
+        GitHub Actions, CircleCI, and other CI/CD tools.
+
+        Args:
+            results: List of validation results containing policy findings
+
+        Returns:
+            Path to the created XML report file
+
+        Raises:
+            IOError: If unable to write the XML file
+        """
+        import socket
+        import xml.etree.ElementTree as ET
+        from xml.dom import minidom
+
+        timestamp = datetime.now()
+        file_name = Path(f"AccessAnalyzerReport_{timestamp.strftime('%Y%m%d_%H%M%S')}.xml")
+
+        logger.info("Creating JUnit XML report...")
+
+        # Calculate summary statistics
+        total_tests = 0
+        total_failures = 0
+        total_errors = 0
+        total_time = 0.0
+
+        # Create root element
+        testsuites = ET.Element("testsuites")
+        testsuites.set("name", "AWS Policy Validation")
+        testsuites.set("timestamp", timestamp.isoformat())
+        testsuites.set("hostname", socket.gethostname())
+
+        # Process each policy as a test suite
+        for result in results:
+            policy_name = result.get("filePolicy", "Unknown Policy")
+            summary = result.get("summary", [])
+
+            # Count findings by type for this policy
+            suite_tests = 0
+            suite_failures = 0
+            suite_errors = 0
+            suite_time = 0.1  # Estimated time per policy
+
+            # Each policy gets at least one test case (the validation itself)
+            # If there are findings, each finding becomes a test case
+            if not summary:
+                suite_tests = 1  # One passing test for valid policy
+            else:
+                suite_tests = len(summary)
+                for finding in summary:
+                    finding_type = finding.get("findingType", "")
+                    if finding_type == "ERROR":
+                        suite_errors += 1
+                    elif finding_type in ["WARNING", "SECURITY_WARNING"]:
+                        suite_failures += 1
+                    # SUGGESTION findings are passing tests (no error/failure)
+
+            # Create testsuite element
+            testsuite = ET.SubElement(testsuites, "testsuite")
+            testsuite.set("name", policy_name)
+            testsuite.set("tests", str(suite_tests))
+            testsuite.set("failures", str(suite_failures))
+            testsuite.set("errors", str(suite_errors))
+            testsuite.set("time", f"{suite_time:.3f}")
+            testsuite.set("timestamp", timestamp.isoformat())
+
+            # Add properties section with metadata
+            properties = ET.SubElement(testsuite, "properties")
+
+            prop_validator = ET.SubElement(properties, "property")
+            prop_validator.set("name", "validator")
+            prop_validator.set("value", "AWS IAM Access Analyzer")
+
+            prop_policy = ET.SubElement(properties, "property")
+            prop_policy.set("name", "policy_file")
+            prop_policy.set("value", policy_name)
+
+            prop_findings = ET.SubElement(properties, "property")
+            prop_findings.set("name", "total_findings")
+            prop_findings.set("value", str(len(summary)))
+
+            # Create test cases
+            if not summary:
+                # Policy is valid - create a passing test case
+                testcase = ET.SubElement(testsuite, "testcase")
+                testcase.set("classname", policy_name.replace(".json", ""))
+                testcase.set("name", "ValidatePolicy")
+                testcase.set("time", f"{suite_time:.3f}")
+            else:
+                # Create a test case for each finding
+                for idx, finding in enumerate(summary, 1):
+                    finding_type = finding.get("findingType", "UNKNOWN")
+                    issue_code = finding.get("issueCode", "N/A")
+                    details = finding.get("findingDetails", "No details available")
+                    learn_more = finding.get("learnMoreLink", "")
+
+                    testcase = ET.SubElement(testsuite, "testcase")
+                    testcase.set("classname", policy_name.replace(".json", ""))
+                    testcase.set("name", f"{issue_code}_{idx}")
+                    testcase.set("time", f"{suite_time / len(summary):.3f}")
+
+                    # Build detailed message
+                    message = f"{finding_type}: {issue_code}"
+                    details_text = f"Finding Type: {finding_type}\n"
+                    details_text += f"Issue Code: {issue_code}\n"
+                    details_text += f"Details: {details}\n"
+                    if learn_more:
+                        details_text += f"Learn More: {learn_more}\n"
+
+                    # Add error or failure element based on finding type
+                    if finding_type == "ERROR":
+                        error = ET.SubElement(testcase, "error")
+                        error.set("type", finding_type)
+                        error.set("message", message)
+                        error.text = details_text
+                    elif finding_type in ["WARNING", "SECURITY_WARNING"]:
+                        failure = ET.SubElement(testcase, "failure")
+                        failure.set("type", finding_type)
+                        failure.set("message", message)
+                        failure.text = details_text
+                    # SUGGESTION findings don't get error/failure elements (passing tests)
+
+            # Update totals
+            total_tests += suite_tests
+            total_failures += suite_failures
+            total_errors += suite_errors
+            total_time += suite_time
+
+        # Set summary attributes on root element
+        testsuites.set("tests", str(total_tests))
+        testsuites.set("failures", str(total_failures))
+        testsuites.set("errors", str(total_errors))
+        testsuites.set("time", f"{total_time:.3f}")
+
+        # Convert to pretty-printed XML string
+        xml_str = ET.tostring(testsuites, encoding="unicode")
+        dom = minidom.parseString(xml_str)
+        pretty_xml = dom.toprettyxml(indent="  ", encoding="UTF-8")
+
+        try:
+            with file_name.open("wb") as f:
+                f.write(pretty_xml)
+
+            logger.info(f"Created JUnit XML report: {file_name}")
+            return file_name
+
+        except OSError as e:
+            logger.error(f"Failed to create JUnit XML report: {e}")
+            raise
+
+

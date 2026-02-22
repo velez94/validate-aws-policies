@@ -54,6 +54,9 @@ Examples:
   validate-aws-policies --policies-path ./policies --dry-run
 
   # Verbose output
+  # Generate JUnit XML report for CI/CD
+  validate-aws-policies --policies-path ./policies --format xml
+
   validate-aws-policies --policies-path ./policies --verbose
         """,
     )
@@ -93,9 +96,9 @@ Examples:
     parser.add_argument(
         "-f",
         "--format",
-        choices=["json", "text", "html", "md", "markdown"],
+        choices=["json", "text", "html", "md", "markdown", "xml", "junit"],
         default="json",
-        help="Output format for validation results (default: json)",
+        help="Output format for validation results (default: json). Use xml/junit for CI/CD integration",
     )
 
     parser.add_argument(
@@ -221,7 +224,17 @@ def validate_args(args: argparse.Namespace) -> None:
     # Validate output file extension matches format
     if args.output and args.format:
         output_path = Path(args.output)
-        expected_ext = f".{args.format}"
+        # Map format to expected extension (junit -> xml)
+        format_to_ext = {
+            "json": ".json",
+            "text": ".text",
+            "html": ".html",
+            "md": ".md",
+            "markdown": ".md",
+            "xml": ".xml",
+            "junit": ".xml"
+        }
+        expected_ext = format_to_ext.get(args.format, f".{args.format}")
         if output_path.suffix.lower() != expected_ext:
             errors.append(
                 f"Output file extension {output_path.suffix} does not match "
