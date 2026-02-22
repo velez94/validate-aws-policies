@@ -1,0 +1,9 @@
+# Sample TOML configuration for AWS policy validation
+
+profile = "test-profile"
+policies_path = "./test-policies"
+upload_report = false
+create_zip = true
+verbose = true
+quiet = false
+log_format = "json"

@@ -1,38 +1,59 @@
+# Pre-commit hooks for code quality and consistency
+# Install: pre-commit install
+# Run manually: pre-commit run --all-files
+
 repos:
-- repo: https://github.com/astral-sh/ruff-pre-commit
-  # Ruff version.
-  rev: v0.1.11
-  hooks:
-    # Run the linter.
-    - id: ruff
-      args: [ --fix ]
-    # Run the formatter.
-    - id: ruff-format
-
--   repo: https://github.com/miki725/importanize
-    rev: 0.8.0-alpha2
+  # Ruff - Fast Python linter and formatter
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.1.9
     hooks:
-    -   id: importanize
+      # Run the linter
+      - id: ruff
+        args: [--fix]
+        types_or: [python, pyi]
+      # Run the formatter
+      - id: ruff-format
+        types_or: [python, pyi]
 
-#-   repo: https://github.com/PyCQA/bandit
-#    rev: 1.7.6
-#    hooks:
-#    - id: bandit
-
-
-#   repo: https://github.com/Lucas-C/pre-commit-hooks-safety
-#   rev: v1.7.2
-#   hooks:
-#   -   id: python-safety-dependencies-check
-#       args: [check, --full-report, --file]
-
--   repo: https://github.com/PyCQA/pydocstyle
-    rev: 6.3.0
+  # Standard pre-commit hooks for file hygiene
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
     hooks:
-    -   id: pydocstyle
+      # Remove trailing whitespace
+      - id: trailing-whitespace
+        args: [--markdown-linebreak-ext=md]
+      # Ensure files end with a newline
+      - id: end-of-file-fixer
+      # Validate YAML files
+      - id: check-yaml
+        args: [--safe]
+      # Validate JSON files
+      - id: check-json
+      # Prevent large files from being committed
+      - id: check-added-large-files
+        args: [--maxkb=1000]
+      # Check for merge conflict markers
+      - id: check-merge-conflict
+      # Check for files that would conflict on case-insensitive filesystems
+      - id: check-case-conflict
+      # Check for debugger imports and breakpoints
+      - id: debug-statements
+      # Validate TOML files
+      - id: check-toml
+      # Check for mixed line endings
+      - id: mixed-line-ending
+        args: [--fix=lf]
 
-
-
-
-
-
+  # Mypy - Static type checker
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.8.0
+    hooks:
+      - id: mypy
+        additional_dependencies:
+          - types-colorama
+          - types-requests
+          - boto3-stubs[accessanalyzer,s3]
+        args:
+          - --ignore-missing-imports
+          - --no-strict-optional
+        files: ^src/

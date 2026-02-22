@@ -1,0 +1,9 @@
+# Sample YAML configuration for AWS policy validation
+profile: test-profile
+policies_path: ./test-policies
+upload_report: true
+bucket_name: test-reports-bucket
+create_zip: false
+verbose: false
+quiet: false
+log_format: text

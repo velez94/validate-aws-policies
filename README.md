@@ -1,6 +1,6 @@
 # Validate AWS policies 
 
-This package scan **AWS SCP** policies and create report in HTML and PDF format.
+This package scan **AWS SCP** policies and create report in HTML format.
 
 # Pre-Requirements
 Setup AWS Cli profile for interacting with IAM access analyzer API using IAM or SSO credentials.

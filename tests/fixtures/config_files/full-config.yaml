@@ -1,0 +1,13 @@
+# Full configuration with all available options
+profile: production-profile
+policies_path: ./production-policies
+upload_report: true
+bucket_name: production-reports-bucket
+bucket_prefix: reports/
+create_zip: true
+verbose: true
+quiet: false
+log_format: json
+dry_run: false
+output_format: json
+output_file: ./report.json

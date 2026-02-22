@@ -1,0 +1,23 @@
+# Example configuration file for validate-aws-policies
+# Copy this file to config.toml and customize as needed
+
+# AWS profile to use for Access Analyzer API
+profile = "my-aws-profile"
+
+# S3 bucket name for uploading reports
+bucket_name = "my-reports-bucket"
+
+# Directory containing policy files (JSON format)
+directory_policies_path = "./policies"
+
+# Enable report upload to S3
+upload_report = false
+
+# Create ZIP archive of reports
+zip_reports = false
+
+# CI/CD mode
+ci = false
+
+# Logging level (DEBUG, INFO, WARNING, ERROR)
+log_level = "INFO"

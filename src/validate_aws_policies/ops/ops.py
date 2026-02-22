@@ -1,56 +1,73 @@
 """Automate Ops, validate and create reports."""
+
 import json
 import logging
+import time
 from datetime import datetime
+from pathlib import Path
+from typing import Any, Dict, List, Optional
 from zipfile import ZipFile
 
 import boto3
-import os
-import pdfkit
+from botocore.config import Config
 from botocore.exceptions import ClientError
 from colorama import Fore
-from json2html import json2html
-from psutil.tests.test_process_all import proc_info
 
 
-def read_policies(file_path):
+logger = logging.getLogger(__name__)
+
+
+def read_policies(file_path: Path) -> Optional[str]:
     """
     Read policies from a text file and return them as a string.
 
-    :param file_path: file path of the text file containing the policies
-    :return:
+    Args:
+        file_path: Path object of the text file containing the policies
+
+    Returns:
+        Policy document as string, or None if file cannot be opened
+
+    Raises:
+        FileNotFoundError: If the policy file doesn't exist
     """
-    # check if file is present
-    print(file_path)
-    if os.path.isfile(file_path):
-        # open text file in read mode
-        text_file = open(file_path, "r")
+    logger.debug(f"Reading policy from: {file_path}")
 
-        # read whole file to a string
-        data = text_file.read()
-
-        # close file
-        text_file.close()
-
-        print(data)
-        return data
-    else:
-        print("Cannot open the file")
+    if not file_path.is_file():
+        logger.error(f"Cannot open the file: {file_path}")
         return None
 
+    try:
+        with file_path.open("r", encoding="utf-8") as f:
+            data = f.read()
+        logger.debug(f"Successfully read policy: {file_path.name}")
+        return data
+    except FileNotFoundError:
+        logger.error(f"Policy file not found: {file_path}")
+        raise
+    except Exception as e:
+        logger.error(f"Error reading policy file {file_path}: {e}")
+        raise
 
-def validate_findings(policy, findings):
+
+def validate_findings(policy: str, findings: List[Dict[str, Any]]) -> Dict[str, Any]:
     """
     Validate findings for a policy and return a summary of the findings.
 
-    :param policy: policy file name
-    :param findings: findings for the policy
-    :return:
+    Args:
+        policy: Policy file name
+        findings: List of findings for the policy
+
+    Returns:
+        Dictionary containing filePolicy and summary of findings
+
+    Raises:
+        ValueError: If ERROR-level finding is detected
     """
-    policy_name = policy.replace(".json", "")
-    summary = {"filePolicy": policy, "summary": []}
+    policy_name = Path(policy).stem
+    summary: Dict[str, Any] = {"filePolicy": policy, "summary": []}
+
     if len(findings) == 0:
-        logging.info(f"✅ No findings for {policy}")
+        logger.info(f"✅ No findings for {policy}")
         summary["summary"].append(
             {
                 "policyName": policy_name,
@@ -60,181 +77,101 @@ def validate_findings(policy, findings):
             }
         )
     else:
-        logging.info(f"There are some findings for {policy_name}")
-        print("Findings: \n")
+        logger.info(f"There are some findings for {policy_name}")
+        logger.info("Findings:")
+
         for f in findings:
             if f["findingType"] == "ERROR":
-                print(Fore.RED + "Error: " + Fore.RESET)
-                print(json.dumps(f, indent=4))
-                raise BaseException("ERROR- Find Some Problems with policy")
+                logger.error(f"Error finding in {policy_name}: {json.dumps(f, indent=4)}")
+                raise ValueError(f"ERROR - Found problems with policy {policy_name}")
 
-            print(Fore.YELLOW + "Summary" + Fore.RESET)
-            print(Fore.YELLOW + "policyName: " + policy_name + Fore.RESET)
-            if f["issueCode"] is not None:
-                print(Fore.GREEN + "⚠️ issueCode: " + f["issueCode"] + Fore.RESET)
-            print(Fore.GREEN + "⚠️ findingType: " + f["findingType"] + Fore.RESET)
-            print(Fore.YELLOW + "⚠️ Details" + Fore.RESET)
-            print(json.dumps(f, indent=4))
-            print("\n")
-            # Create dict for write in pdf file
+            logger.warning(f"Summary for {policy_name}")
+            logger.warning(f"policyName: {policy_name}")
+
+            if f.get("issueCode") is not None:
+                logger.warning(f"⚠️ issueCode: {f['issueCode']}")
+
+            logger.warning(f"⚠️ findingType: {f['findingType']}")
+            logger.warning(f"⚠️ Details: {json.dumps(f, indent=4)}")
+
+            # Create dict for report summary
             summary["summary"].append(
                 {
                     "policyName": policy_name,
-                    "issueCode": f["issueCode"],
+                    "issueCode": f.get("issueCode"),
                     "findingType": f["findingType"],
                     "details": f,
                 }
             )
 
-        print("\n")
     return summary
 
 
-def upload_file(file_name, bucket, key="reports"):
+def upload_file(file_name: Path, bucket: str, key: str = "reports", max_retries: int = 3) -> bool:
     """
-    Upload a file to an S3 bucket.
+    Upload a file to an S3 bucket with retry logic and exponential backoff.
 
-    :param file_name: File to upload
-    :param bucket: Bucket to upload to
-    :param key: Object Key
-    :return: True if file was uploaded, else False
+    Args:
+        file_name: Path to file to upload
+        bucket: Bucket to upload to
+        key: Object Key
+        max_retries: Maximum number of retry attempts (default: 3)
+
+    Returns:
+        True if file was uploaded, else False
     """
-    # Upload the file
-    s3_client = boto3.client("s3")
-    try:
-        response = s3_client.upload_file(file_name, bucket, Key=key)
-        logging.info(response)
-        print(f"{Fore.GREEN} ✨ The reports was uploaded" )
-    except ClientError as e:
-        logging.error(e)
-        print(f"{Fore.RED} ⚠️ Error uploading the reports" )
-        return False
-    return True
+    # Configure boto3 with adaptive retry mode
+    config = Config(retries={"max_attempts": max_retries, "mode": "adaptive"})
+    s3_client = boto3.client("s3", config=config)
+
+    # Manual retry with exponential backoff for additional resilience
+    for attempt in range(max_retries):
+        try:
+            s3_client.upload_file(str(file_name), bucket, Key=key)
+            logger.info(f"Successfully uploaded {file_name.name} to s3://{bucket}/{key}")
+            logger.info(f"{Fore.GREEN} ✨ The reports was uploaded{Fore.RESET}")
+            return True
+        except ClientError as e:
+            if attempt == max_retries - 1:
+                # Final attempt failed
+                logger.error(f"Error uploading {file_name.name} after {max_retries} attempts: {e}")
+                logger.error(f"{Fore.RED} ⚠️ Error uploading the reports{Fore.RESET}")
+                return False
+
+            # Calculate exponential backoff wait time
+            wait_time = 2**attempt
+            logger.warning(
+                f"Upload attempt {attempt + 1}/{max_retries} failed for {file_name.name}, "
+                f"retrying in {wait_time}s: {e}"
+            )
+            time.sleep(wait_time)
+
+    return False
 
 
-def create_zip(file_paths: list):
+def create_zip(file_paths: List[Path]) -> Path:
     """
     Create a zip file of the reports.
 
-    :param file_paths: list of file paths to zip
-    :return:
+    Args:
+        file_paths: List of file paths to zip
 
+    Returns:
+        Path to the created zip file
     """
     d = datetime.now()
-    zip_name = f"reports_{d}.zip"
-    logging.info("Creating zip mood.")
-    # writing mood to a zipfile
-    with ZipFile(zip_name, "w") as zip:
-        # writing each file one by one
+    zip_name = Path(f"reports_{d}.zip")
+
+    logger.info("Creating zip archive.")
+
+    with ZipFile(zip_name, "w") as zip_file:
         for file in file_paths:
-            logging.info(f"{file} Zipped!!")
-            zip.write(file)
-    logging.info("✅ All mood zipped successfully!")
-    print(Fore.GREEN + "✅ All mood zipped successfully!" + Fore.RESET)
+            logger.info(f"{file} Zipped!!")
+            zip_file.write(file)
+
+    logger.info("✅ All files zipped successfully!")
+    logger.info(f"{Fore.GREEN}✅ All files zipped successfully!{Fore.RESET}")
 
     return zip_name
 
 
-def create_report(report, create_zip_files=False, create_pdf=False):
-    """
-    Create a report of the findings.
-
-    :param create_pdf: create a pdf report
-    :param report:  to create
-    :param create_zip_files:  a zip report
-    :return:
-    """
-    date = datetime.today()
-    # initializing variables with values
-    file_name = f"AccessAnalyzerReport_{date}"
-    logging.info("Creating reports ...")
-    body = """
-        <html>
-        <style>
-      .tbl { border-collapse: collapse; width:300px; }
-      .tbl th, .tbl td { padding: 5px; border: solid 1px #777; }
-      .tbl th { background-color: #00ff0080; }
-      .tbl-separate { border-collapse: separate; border-spacing: 5px;}
-
-          .fl-table {
-            border-radius: 5px;
-            font-size: 12px;
-            font-weight: normal;
-            border: none;
-            border-collapse: collapse;
-            width: 100%;
-            max-width: 100%;
-            white-space: nowrap;
-            background-color: white;
-
-        }
-
-        .fl-table td, .fl-table th {
-            text-align: left;
-            padding: 8px;
-            border: solid 1px #777;
-        }
-
-        .fl-table td {
-            border-right: 1px solid #f8f8f8;
-            font-size: 14px;
-        }
-
-        .fl-table thead th {
-            color: #ffffff;
-            background: #4FC3D8;
-        }
-
-
-        .fl-table thead th:nth-child(odd) {
-            color: #ffffff;
-            background: #324960;
-        }
-
-        .fl-table tr:nth-child(even) {
-            background: #F8F8FA;
-        }
-
-        </style>
-
-          <h1 style="font-size:100px; color:black; margin:10px;">Validate AWS Policies Report</h1>
-
-        <p style="font-size:30px; color: black;"><em>Access Analyzer Report for Permissions Set</em></p>
-
-          </html>
-        """
-
-    with open(f"{file_name}.html", "w") as file:
-        file.write(body)
-        logging.info("Creating HTML Report...")
-        content = json2html.convert(
-            json=report, table_attributes='id="report-table" class="fl-table"'
-        )
-        print(content, file=file)
-        files_paths = [f"{file_name}.html"]
-
-    if create_pdf:
-        # Create pdf file
-        options = {
-            "page-size": "A0",
-            "margin-top": "0.7in",
-            "margin-right": "0.7in",
-            "margin-bottom": "0.7in",
-            "margin-left": "0.7in",
-            "encoding": "UTF-8",
-            "orientation": "Landscape",
-        }
-        logging.info("Creating PDF Report...")
-        pdfkit.from_file(
-            f"{file_name}.html",
-            f"{file_name}.pdf",
-            options=options,
-        )
-        files_paths.append(f"{file_name}.pdf")
-    if create_zip_files:
-        zip_name = create_zip(
-            file_paths=files_paths,
-        )
-        return [zip_name]
-    else:
-        return files_paths

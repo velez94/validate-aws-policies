@@ -1,0 +1,2 @@
+# Minimal configuration with only required fields
+policies_path: ./policies
