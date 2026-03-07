@@ -573,7 +573,7 @@ Generated: {timestamp.strftime('%Y-%m-%d %H:%M:%S')}
         Create JUnit XML report from validation results for CI/CD integration.
 
         The XML format follows the JUnit schema compatible with Jenkins, GitLab CI,
-        GitHub Actions, CircleCI, and other CI/CD tools.
+        GitHub Actions, CircleCI, AWS CodeBuild, and other CI/CD tools.
 
         Args:
             results: List of validation results containing policy findings
@@ -586,7 +586,6 @@ Generated: {timestamp.strftime('%Y-%m-%d %H:%M:%S')}
         """
         import socket
         import xml.etree.ElementTree as ET
-        from xml.dom import minidom
 
         timestamp = datetime.now()
         file_name = Path(f"AccessAnalyzerReport_{timestamp.strftime('%Y%m%d_%H%M%S')}.xml")
@@ -602,7 +601,7 @@ Generated: {timestamp.strftime('%Y-%m-%d %H:%M:%S')}
         # Create root element
         testsuites = ET.Element("testsuites")
         testsuites.set("name", "AWS Policy Validation")
-        testsuites.set("timestamp", timestamp.isoformat())
+        testsuites.set("timestamp", timestamp.strftime('%Y-%m-%dT%H:%M:%S'))
         testsuites.set("hostname", socket.gethostname())
 
         # Process each policy as a test suite
@@ -636,8 +635,9 @@ Generated: {timestamp.strftime('%Y-%m-%d %H:%M:%S')}
             testsuite.set("tests", str(suite_tests))
             testsuite.set("failures", str(suite_failures))
             testsuite.set("errors", str(suite_errors))
+            testsuite.set("skipped", "0")  # Required by AWS CodeBuild
             testsuite.set("time", f"{suite_time:.3f}")
-            testsuite.set("timestamp", timestamp.isoformat())
+            testsuite.set("timestamp", timestamp.strftime('%Y-%m-%dT%H:%M:%S'))
 
             # Add properties section with metadata
             properties = ET.SubElement(testsuite, "properties")
@@ -695,6 +695,10 @@ Generated: {timestamp.strftime('%Y-%m-%d %H:%M:%S')}
                         failure.text = details_text
                     # SUGGESTION findings don't get error/failure elements (passing tests)
 
+            # Add system-out and system-err elements (required by AWS CodeBuild)
+            ET.SubElement(testsuite, "system-out")
+            ET.SubElement(testsuite, "system-err")
+
             # Update totals
             total_tests += suite_tests
             total_failures += suite_failures
@@ -705,15 +709,38 @@ Generated: {timestamp.strftime('%Y-%m-%d %H:%M:%S')}
         testsuites.set("tests", str(total_tests))
         testsuites.set("failures", str(total_failures))
         testsuites.set("errors", str(total_errors))
+        testsuites.set("skipped", "0")  # Required by AWS CodeBuild
         testsuites.set("time", f"{total_time:.3f}")
 
-        # Convert to pretty-printed XML string
-        xml_str = ET.tostring(testsuites, encoding="unicode")
-        dom = minidom.parseString(xml_str)
-        pretty_xml = dom.toprettyxml(indent="  ", encoding="UTF-8")
+        # Generate clean XML without minidom's extra blank lines
+        # Use ElementTree's indent method (Python 3.9+) or manual formatting
+        try:
+            # Python 3.9+ has indent method
+            ET.indent(testsuites, space="  ", level=0)
+            xml_str = ET.tostring(testsuites, encoding="unicode", xml_declaration=False)
+            # Add clean XML declaration
+            pretty_xml = '<?xml version="1.0" encoding="UTF-8"?>\n' + xml_str
+        except AttributeError:
+            # Fallback for Python < 3.9: use minidom but clean up output
+            xml_str = ET.tostring(testsuites, encoding="unicode")
+            from xml.dom import minidom
+            dom = minidom.parseString(xml_str)
+            pretty_xml_bytes = dom.toprettyxml(indent="  ", encoding="UTF-8")
+            # Remove extra blank lines that minidom adds
+            lines = pretty_xml_bytes.decode("UTF-8").split('\n')
+            # Filter out empty lines between elements
+            cleaned_lines = []
+            for i, line in enumerate(lines):
+                if line.strip() or (i > 0 and lines[i-1].strip().endswith('>')):
+                    cleaned_lines.append(line)
+            pretty_xml = '\n'.join(cleaned_lines)
+            # Ensure clean XML declaration
+            if pretty_xml.startswith('<?xml'):
+                pretty_xml = pretty_xml.split('\n', 1)[1]
+            pretty_xml = '<?xml version="1.0" encoding="UTF-8"?>\n' + pretty_xml
 
         try:
-            with file_name.open("wb") as f:
+            with file_name.open("w", encoding="utf-8") as f:
                 f.write(pretty_xml)
 
             logger.info(f"Created JUnit XML report: {file_name}")
