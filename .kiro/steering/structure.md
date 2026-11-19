@@ -30,11 +30,12 @@ tests/
 └── fixtures/{sample_policies,config_files}
 
 scripts/validate_junit_xml.py     # manual CodeBuild JUnit XML validator
-docs/                             # mkdocs site: index, installation, usage, configuration, access-analyzer-features, examples, api, changelog, JUNIT_XML_REPORT
+docs/                             # mkdocs site: index, installation, usage, configuration, access-analyzer-features, examples, codebuild, JUNIT_XML_REPORT, api, development, changelog (includes CHANGELOG.md), assets/sample-report.html
 examples/policies/                # sample policy JSON
 config.example.{yaml,toml}        # sample config files
 .github/workflows/publish.yml     # release pipeline
 .github/workflows/test.yml        # ruff, mypy and pytest on Python 3.8-3.13
+.github/workflows/docs.yml        # mkdocs build --strict, deploy to GitHub Pages from main
 .kiro/specs/cli-developer-improvements/   # requirements, design, tasks for the 3.x CLI modernization
 .kiro/specs/access-analyzer-modernization/ # plan for adopting new Access Analyzer APIs
 ```
@@ -58,5 +59,6 @@ config.example.{yaml,toml}        # sample config files
 - New output format: `ops/reports.py` method, wire it in `PolicyValidator._generate_reports`, add the choice and extension to `--format` in `cli/args.py`, and add tests.
 - New Access Analyzer API call: feature-detect it in `iam_access_analyzer/features.py`, add Stubber-based tests, and keep the boto3 floor unchanged.
 - Version bump: `pyproject.toml`, `version.py`, `CHANGELOG.md`.
+- Docs: every user-visible change updates `docs/` and `CHANGELOG.md`; `mkdocs build --strict` must pass (it validates links and anchors). Regenerate `docs/assets/sample-report.html` when the HTML report changes.
 - New exit code: `cli/exit_codes.py` plus docs; keep existing values.
 - Release: bump `pyproject.toml` and `version.py`, update `CHANGELOG.md`, push a `vX.Y.Z` tag.

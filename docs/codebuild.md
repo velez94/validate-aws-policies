@@ -1,12 +1,9 @@
-# AWS CodeBuild Integration Guide
+# AWS CodeBuild
 
-## Overview
+Publish the policy validation results as a CodeBuild test report by writing JUnit XML.
+See [JUnit XML Report](JUNIT_XML_REPORT.md) for the file structure.
 
-The JUnit XML report generation has been updated to be fully compatible with AWS CodeBuild test reporting. This guide shows how to integrate policy validation into your CodeBuild pipeline.
-
-## Quick Start
-
-### 1. Basic buildspec.yml
+## Basic buildspec
 
 ```yaml
 version: 0.2
@@ -14,264 +11,102 @@ version: 0.2
 phases:
   install:
     runtime-versions:
-      python: 3.11
+      python: 3.12
     commands:
       - pip install validate-aws-policies
-
   build:
     commands:
-      - echo "Validating AWS policies..."
-      - python -m validate_aws_policies \
-          --format xml \
-          --directory-policies-path ./policies \
-          --profile $AWS_PROFILE
-
-reports:
-  policy-validation-report:
-    files:
-      - 'AccessAnalyzerReport_*.xml'
-    file-format: JUNITXML
-```
-
-### 2. With Multiple Policy Directories
-
-```yaml
-version: 0.2
-
-phases:
-  install:
-    runtime-versions:
-      python: 3.11
-    commands:
-      - pip install validate-aws-policies
-
-  build:
-    commands:
-      - echo "Validating SCP policies..."
-      - python -m validate_aws_policies \
-          --format xml \
-          --directory-policies-path ./policies/scp \
-          --policy-type service_control_policy
-      
-      - echo "Validating IAM policies..."
-      - python -m validate_aws_policies \
-          --format xml \
-          --directory-policies-path ./policies/iam \
-          --policy-type identity_policy
-
-reports:
-  scp-validation:
-    files:
-      - 'AccessAnalyzerReport_*.xml'
-    file-format: JUNITXML
-```
-
-### 3. With S3 Upload
-
-```yaml
-version: 0.2
-
-phases:
-  install:
-    runtime-versions:
-      python: 3.11
-    commands:
-      - pip install validate-aws-policies
-
-  build:
-    commands:
-      - echo "Validating policies..."
-      - python -m validate_aws_policies \
-          --format xml \
-          --directory-policies-path ./policies \
-          --upload-report \
-          --bucket-name my-policy-reports-bucket \
-          --create-pdf-reports
+      - validate-aws-policies --policies-path ./policies --format xml --output reports/policies.xml
 
 reports:
   policy-validation:
     files:
-      - 'AccessAnalyzerReport_*.xml'
+      - 'reports/policies.xml'
     file-format: JUNITXML
-
-artifacts:
-  files:
-    - 'AccessAnalyzerReport_*.pdf'
-    - 'AccessAnalyzerReport_*.html'
 ```
 
-## Report Interpretation
+Use the CodeBuild service role instead of `--profile`; the build already has credentials.
+The role needs `access-analyzer:ValidatePolicy` (see
+[IAM permissions](installation.md#iam-permissions)).
 
-### Test Results in CodeBuild
+!!! note "Exit codes"
+    The command exits with code 1 when an ERROR finding or a failed custom check is found, so
+    the build fails. The report file is written before the command exits. Use
+    `--fail-on none` if findings should never fail the build, or `--fail-on warning` to be
+    stricter. See [Failure handling](access-analyzer-features.md#failure-handling).
 
-CodeBuild will display:
-- **Total Tests**: Number of policies validated + number of findings
-- **Passed**: Policies with no ERROR or WARNING findings
-- **Failed**: Policies with WARNING or SECURITY_WARNING findings
-- **Errors**: Policies with ERROR findings
-- **Skipped**: Always 0 (no tests are skipped)
+## Several policy types
 
-### Finding Types Mapping
+Run the tool once per policy type and write one report per run:
 
-| Finding Type | JUnit Status | CodeBuild Display |
-|--------------|--------------|-------------------|
-| ERROR | Error | Red (Error) |
-| WARNING | Failure | Yellow (Failed) |
-| SECURITY_WARNING | Failure | Yellow (Failed) |
-| SUGGESTION | Pass | Green (Passed) |
-| No findings | Pass | Green (Passed) |
+```yaml
+phases:
+  build:
+    commands:
+      - validate-aws-policies -d policies/scp --policy-type scp --format xml --output reports/scp.xml
+      - validate-aws-policies -d policies/iam --format xml --output reports/iam.xml
+
+reports:
+  policy-validation:
+    files:
+      - 'reports/*.xml'
+    file-format: JUNITXML
+```
+
+or validate them together with `policy_sets` in a [config file](access-analyzer-features.md#policy-sets).
+
+## Upload reports to S3
+
+```yaml
+  build:
+    commands:
+      - >
+        validate-aws-policies -d policies --format all --zip
+        --upload --bucket my-policy-reports-bucket
+```
+
+`--format all` writes HTML, Markdown and JUnit XML. The files are uploaded to
+`s3://my-policy-reports-bucket/AccessAnalyzer/<YYYY>/<MM>/<DD>/`. PDF reports were removed
+in version 3.0.
+
+## Custom checks in CodeBuild
+
+Keep a baseline copy of the approved policies (for example a directory in the repository or
+files fetched from S3) and compare against it:
+
+```yaml
+  build:
+    commands:
+      - >
+        validate-aws-policies -d policies --check-no-new-access
+        --reference-path baseline --format xml --output reports/policies.xml
+```
+
+Custom checks are billed per API call, see
+[Policy Types & Custom Checks](access-analyzer-features.md#custom-policy-checks).
+
+## How findings appear in CodeBuild
+
+| Finding type | JUnit status | CodeBuild shows |
+|---|---|---|
+| `ERROR`, failed custom check | error | Error |
+| `WARNING`, `SECURITY_WARNING` | failure | Failed |
+| `SUGGESTION` | pass | Passed |
+| no findings | pass | Passed |
 
 ## Troubleshooting
 
-### Issue: "Incomplete" Status in CodeBuild
-
-**Solution**: This has been fixed. Ensure you're using the latest version with:
-- `skipped="0"` attribute on testsuites and testsuite elements
-- `<system-out>` and `<system-err>` elements in each testsuite
-- Proper timestamp format (ISO 8601 without microseconds)
-
-### Issue: Reports Not Found
-
-**Check**:
-1. XML files are generated in the workspace root
-2. File pattern in `reports.files` matches the generated files
-3. Build phase completes successfully before reports are collected
-
-```yaml
-reports:
-  policy-validation:
-    files:
-      - 'AccessAnalyzerReport_*.xml'  # Wildcard pattern
-    file-format: JUNITXML
-    base-directory: '.'  # Optional: specify base directory
-```
-
-### Issue: Permission Denied
-
-**Solution**: Ensure CodeBuild service role has permissions:
-
-```json
-{
-  "Version": "2012-10-17",
-  "Statement": [
-    {
-      "Effect": "Allow",
-      "Action": [
-        "access-analyzer:ValidatePolicy"
-      ],
-      "Resource": "*"
-    }
-  ]
-}
-```
-
-## Advanced Configuration
-
-### Fail Build on Policy Errors
-
-```yaml
-version: 0.2
-
-phases:
-  build:
-    commands:
-      - |
-        python -m validate_aws_policies \
-          --format xml \
-          --directory-policies-path ./policies || exit 1
-```
-
-### Multiple Report Groups
-
-```yaml
-reports:
-  scp-policies:
-    files:
-      - 'AccessAnalyzerReport_*_scp.xml'
-    file-format: JUNITXML
-  
-  iam-policies:
-    files:
-      - 'AccessAnalyzerReport_*_iam.xml'
-    file-format: JUNITXML
-  
-  resource-policies:
-    files:
-      - 'AccessAnalyzerReport_*_resource.xml'
-    file-format: JUNITXML
-```
-
-### Custom Report Retention
-
-```yaml
-reports:
-  policy-validation:
-    files:
-      - 'AccessAnalyzerReport_*.xml'
-    file-format: JUNITXML
-    discard-paths: yes
-```
-
-## Viewing Reports
-
-### In CodeBuild Console
-
-1. Navigate to your build project
-2. Click on a build run
-3. Go to the "Reports" tab
-4. View test results with:
-   - Summary statistics
-   - Individual test cases
-   - Failure details with finding information
-
-### Using AWS CLI
+**Report shows "Incomplete"** Use version 3.1.1 or later. Earlier versions omitted
+attributes CodeBuild requires (`skipped`, `system-out`, `system-err`). The
+[validation script](https://github.com/velez94/validate-aws-policies/blob/main/scripts/validate_junit_xml.py)
+checks a file against these rules:
 
 ```bash
-# List report groups
-aws codebuild list-report-groups
-
-# List reports in a group
-aws codebuild list-reports-for-report-group \
-  --report-group-arn arn:aws:codebuild:region:account:report-group/name
-
-# Get report details
-aws codebuild batch-get-reports \
-  --report-arns arn:aws:codebuild:region:account:report/id
+python3 scripts/validate_junit_xml.py reports/policies.xml
 ```
 
-## Best Practices
+**No report files found** Check the path in `reports.files`. Without `--output` the tool
+writes `AccessAnalyzerReport_<timestamp>.xml` in the working directory.
 
-1. **Separate Report Groups**: Use different report groups for different policy types
-2. **Fail Fast**: Configure build to fail on ERROR findings
-3. **Archive Reports**: Upload HTML/PDF reports as artifacts for detailed review
-4. **Notifications**: Set up SNS notifications for failed builds
-5. **Retention**: Configure appropriate report retention periods
-
-## Example Output
-
-When a policy has findings, CodeBuild will show:
-
-```
-Test Results:
-  Total: 3
-  Passed: 1
-  Failed: 1
-  Errors: 1
-  
-Failed Tests:
-  - policy.json > MISSING_ACTION_1
-    Type: WARNING
-    Details: Policy allows actions that don't exist...
-    
-Error Tests:
-  - policy.json > INVALID_PRINCIPAL_2
-    Type: ERROR
-    Details: Principal format is invalid...
-```
-
-## Support
-
-For issues or questions:
-- Check the validation script: `python3 scripts/validate_junit_xml.py <xml_file>`
-- Review AWS CodeBuild logs for detailed error messages
-- Ensure IAM Access Analyzer API is available in your region
+**Exit code 3** The build role lacks an Access Analyzer permission, or the API was throttled
+after retries. The log shows the AWS error code.

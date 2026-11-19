@@ -15,7 +15,7 @@ pytest                      # coverage and --cov-fail-under=80 are enforced in a
 ruff check . && ruff format .
 mypy src/                   # strict-ish: disallow_untyped_defs is on for src
 pre-commit run --all-files
-mkdocs serve
+mkdocs serve                # docs; use `mkdocs build --strict` before committing doc changes
 ```
 
 ## Code conventions
@@ -41,7 +41,7 @@ mkdocs serve
 - Config keys exist in two spellings that `ConfigLoader` keeps in sync per layer: `directory_policies_path`/`policies_path`, `upload_report`/`upload`, `zip_reports`/`zip`. Read the canonical names in new code; keep the legacy ones working.
 - CLI options with `default=None` (`--format`, `--log-format`, `--policy-type`) are resolved in `merge_config()` so config file values are not overwritten. Follow that pattern for new options; boolean flags only override when set.
 - Default behavior still aborts at the first `ERROR` finding (reports are not written). `--continue-on-error`/`--fail-on` are the opt-in alternative; making them the default is deferred to 4.0.
-- `ci` is stored in config but unused.
+- `ci` is stored in config but has no effect (documented as such).
 - Custom policy checks are billed by AWS per call (USD 0.0020 at last check). Do not run them in tests against real AWS; use botocore `Stubber`.
 - Tested compatibility matrix: Python 3.8 with boto3 1.34.138 (floor), and current boto3 on Python 3.14. On the floor, RCP validation exits 2 with an upgrade message; the Check* operations exist.
 - `ops.create_zip` is deprecated and delegates to `ReportGenerator.create_zip`.

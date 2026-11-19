@@ -3,6 +3,8 @@ site_description: 'Validate AWS policies using IAM Access Analyzer API'
 site_author: 'Alejandro Velez'
 repo_url: https://github.com/velez94/validate-aws-policies
 repo_name: velez94/validate-aws-policies
+site_url: https://velez94.github.io/validate-aws-policies/
+edit_uri: edit/main/docs/
 
 nav:
   - Home: index.md
@@ -11,8 +13,18 @@ nav:
   - Configuration: configuration.md
   - Policy Types & Custom Checks: access-analyzer-features.md
   - Examples: examples.md
+  - CI/CD:
+      - AWS CodeBuild: codebuild.md
+      - JUnit XML Report: JUNIT_XML_REPORT.md
   - API Reference: api.md
+  - Development: development.md
   - Changelog: changelog.md
+
+validation:
+  omitted_files: warn
+  absolute_links: warn
+  unrecognized_links: warn
+  anchors: warn
 
 theme:
   name: material
@@ -48,6 +60,11 @@ markdown_extensions:
   - pymdownx.details
   - attr_list
   - md_in_html
+  - toc:
+      permalink: true
+  - pymdownx.snippets:
+      base_path: ['.']
+      check_paths: true
 
 plugins:
   - search

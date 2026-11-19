@@ -1,89 +1,64 @@
 # Validate AWS Policies
 
-A modern CLI tool to validate AWS policies using IAM Access Analyzer API and generate comprehensive reports.
+A command-line tool that validates AWS IAM policies with the
+[IAM Access Analyzer](https://docs.aws.amazon.com/IAM/latest/UserGuide/what-is-access-analyzer.html)
+`ValidatePolicy` API and the Access Analyzer custom policy checks, and writes reports for
+people and for CI/CD pipelines.
 
 ## Features
 
-- ✅ Validate AWS policies (SCP, Identity, Resource-based)
-- 📊 Generate reports in multiple formats (JSON, Text, HTML, Markdown)
-- 🔄 Support for batch validation
-- ☁️ Upload reports to S3
-- 📦 Create ZIP archives of reports
-- 🎨 Beautiful HTML and Markdown reports
-- ⚙️ Configuration file support (YAML/TOML)
-- 🔍 Detailed validation findings with severity levels
+- **Policy types:** identity, resource, service control (SCP) and resource control (RCP) policies, with resource-specific checks for S3 buckets, access points, role trust policies and DynamoDB tables.
+- **Custom policy checks:** fail a build when a policy grants new access compared to a baseline, grants access you have forbidden, or can be public.
+- **Reports:** JSON, text, [HTML](assets/sample-report.html), Markdown, JUnit XML (CodeBuild, Azure Pipelines, Jenkins, GitLab) and SARIF (GitHub code scanning).
+- **Pipeline friendly:** specific exit codes, `--fail-on` severity thresholds, `--dry-run`, JSON logs, S3 upload and ZIP archives.
+- **Configuration:** command line, YAML or TOML file, and environment variables, with a documented precedence.
+- **Compatible:** upgrading within 3.x never removes a flag, config key or exit code. Newer API features are used only when your installed boto3 supports them.
 
-## Quick Start
-
-### Installation
+## Quick start
 
 ```bash
 pip install validate-aws-policies
-```
 
-Or with pipx:
+# Validate every *.json file in a directory (output is JSON on stdout)
+validate-aws-policies --policies-path ./policies --profile my-profile
 
-```bash
-pipx install validate-aws-policies
-```
+# Self-contained HTML report
+validate-aws-policies -d ./policies -p my-profile --format html
 
-### Basic Usage
+# Service control policies, failing the build on any warning
+validate-aws-policies -d ./scps --policy-type scp --fail-on warning
 
-```bash
-# Validate policies in a directory
-validate-aws-policies --policies-path ./policies
-
-# Generate HTML report
-validate-aws-policies --policies-path ./policies --format html
-
-# Generate all formats
-validate-aws-policies --policies-path ./policies --format all
-
-# Use specific AWS profile
-validate-aws-policies --policies-path ./policies -p my-profile
+# Block pull requests that grant more access than the baseline
+validate-aws-policies -d ./policies --check-no-new-access --reference-path ./baseline
 ```
 
 ## Requirements
 
-- Python >= 3.8
-- AWS CLI configured with appropriate credentials
-- IAM permissions for `access-analyzer:ValidatePolicy`
+- Python 3.8 or newer
+- AWS credentials (profile, SSO or environment) allowed to call `access-analyzer:ValidatePolicy`.
+  Custom checks and S3 upload need more permissions, see [Installation](installation.md#iam-permissions).
 
-## AWS Setup
+## Where to go next
 
-Configure AWS CLI profile using IAM or SSO credentials:
+| I want to... | Read |
+|---|---|
+| Install and set up AWS access | [Installation](installation.md) |
+| Run it and read the output | [Usage](usage.md) |
+| Use a config file or environment variables | [Configuration](configuration.md) |
+| Validate SCPs, trust policies or bucket policies, or add custom checks | [Policy Types & Custom Checks](access-analyzer-features.md) |
+| Copy a working command or pipeline | [Examples](examples.md), [AWS CodeBuild](codebuild.md), [JUnit XML](JUNIT_XML_REPORT.md) |
+| Call it from Python or look up every option | [API Reference](api.md) |
+| Contribute or cut a release | [Development](development.md) |
 
-```bash
-# Using SSO
-aws configure sso
+## Example output
 
-# Using IAM credentials
-aws configure
-```
+![Validation example](img/rec_validate.gif)
 
-## Documentation
+Open the [sample HTML report](assets/sample-report.html) to see the report format.
 
-- [Installation Guide](installation.md)
-- [Usage Guide](usage.md)
-- [Configuration](configuration.md)
-- [Examples](examples.md)
-- [API Reference](api.md)
+## License and support
 
-## Example Output
-
-![Validation Example](img/rec_validate.gif)
-
-![HTML Report](img/report_image.png)
-
-## License
-
-Apache License 2.0 - see [LICENSE](https://github.com/velez94/validate-aws-policies/blob/main/LICENSE)
-
-## Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
-
-## Support
-
-- [GitHub Issues](https://github.com/velez94/validate-aws-policies/issues)
-- [Documentation](https://velez94.github.io/validate-aws-policies/)
+Apache License 2.0, see [LICENSE](https://github.com/velez94/validate-aws-policies/blob/main/LICENSE).
+Report problems or ask questions in
+[GitHub Issues](https://github.com/velez94/validate-aws-policies/issues). Pull requests are
+welcome, see [Development](development.md).

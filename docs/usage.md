@@ -1,190 +1,157 @@
-# Usage Guide
-
-## Basic Commands
-
-### Validate Policies
+# Usage
 
 ```bash
-validate-aws-policies --policies-path ./policies
+validate-aws-policies --policies-path ./policies [options]
 ```
 
-### Specify AWS Profile
-
-```bash
-validate-aws-policies --policies-path ./policies -p my-profile
-```
-
-### Generate Reports
-
-#### JSON Output (Default)
-
-```bash
-validate-aws-policies --policies-path ./policies
-```
-
-#### Text Output
-
-```bash
-validate-aws-policies --policies-path ./policies --format text
-```
-
-#### HTML Report
-
-```bash
-validate-aws-policies --policies-path ./policies --format html
-```
-
-#### Markdown Report
-
-```bash
-validate-aws-policies --policies-path ./policies --format md
-```
-
-#### JUnit XML and SARIF
-
-```bash
-validate-aws-policies --policies-path ./policies --format xml
-validate-aws-policies --policies-path ./policies --format sarif
-```
-
-#### All Formats
-
-```bash
-validate-aws-policies --policies-path ./policies --format all   # html, md and xml
-```
-
-See [Policy Types & Custom Checks](access-analyzer-features.md) for SCP/RCP/resource
-policies, custom policy checks, `--fail-on`, policy sets and CI examples.
-
-### Save Output to File
-
-```bash
-validate-aws-policies --policies-path ./policies --format json -o results.json
-```
-
-### Create ZIP Archive
-
-```bash
-validate-aws-policies --policies-path ./policies --format all --zip
-```
-
-### Upload to S3
-
-```bash
-validate-aws-policies --policies-path ./policies --format html --upload -b my-bucket
-```
-
-## Advanced Usage
-
-### Dry Run Mode
-
-Test without generating reports or uploading:
-
-```bash
-validate-aws-policies --policies-path ./policies --dry-run
-```
-
-### Verbose Output
-
-```bash
-validate-aws-policies --policies-path ./policies --verbose
-```
-
-### Quiet Mode
-
-```bash
-validate-aws-policies --policies-path ./policies --quiet
-```
-
-### CI/CD Mode
-
-```bash
-validate-aws-policies --policies-path ./policies --ci
-```
-
-### Using Configuration File
-
-```bash
-validate-aws-policies --config config.yaml
-```
-
-## Command-Line Options
-
-```
-usage: validate-aws-policies [-h] [-v] [--config FILE] [-d PATH]
-                              [-t {identity,resource,scp,rcp}] [--resource-type TYPE]
-                              [--locale LOCALE] [--max-findings N] [-r]
-                              [--continue-on-error] [--fail-on LEVEL] [-p NAME]
-                              [-f {json,text,html,md,markdown,xml,junit,sarif,all}]
-                              [-o FILE] [-z] [-u] [-b NAME] [-c] [--dry-run]
-                              [--verbose | --quiet] [--log-format {text,json}]
-                              [--check-no-new-access] [--reference-path DIR]
-                              [--strict-references] [--check-access-not-granted]
-                              [--deny-actions A,B] [--deny-resources ARN,ARN]
-                              [--check-no-public-access RESOURCE_TYPE]
-
-options:
-  -h, --help            Show help message and exit
-  -v, --version         Show version and exit
-  --config FILE         Path to configuration file (YAML or TOML)
-  -d, --policies-path PATH
-                        Directory containing policy JSON files
-  -t, --policy-type {identity,resource,scp,rcp}
-                        Type of the policies (default: identity)
-  --resource-type TYPE  Resource type for resource policies (s3-bucket, trust-policy, ...)
-  --locale LOCALE       Language of finding messages (default: EN)
-  --max-findings N      Collect at most N findings per policy (default: all)
-  -r, --recursive       Also validate *.json files in sub-directories
-  --continue-on-error   Validate everything, report, then exit 1 on any ERROR
-  --fail-on LEVEL       error, security-warning, warning, suggestion or none
-  -p, --profile NAME    AWS CLI profile name
-  -f, --format {json,text,html,md,markdown,xml,junit,sarif,all}
-                        Output format (default: json)
-  -o, --output FILE     Output file path
-  -z, --zip             Create ZIP archive of reports
-  -u, --upload          Upload reports to S3
-  -b, --bucket NAME     S3 bucket name for uploads
-  -c, --ci              CI/CD mode
-  --dry-run             Validate without generating reports
-  --verbose             Enable verbose logging
-  --quiet               Suppress non-essential output
-  --log-format {text,json}
-                        Log output format
-
-custom policy checks (identity and resource policies, billed per call):
-  --check-no-new-access       Fail if a policy grants more than its baseline
-  --reference-path DIR        Baseline policies (same file names)
-  --strict-references         Missing baseline file counts as a failure
-  --check-access-not-granted  Fail if --deny-actions/--deny-resources are granted
-  --deny-actions A,B          Actions that must not be granted
-  --deny-resources ARN,ARN    Resources that must not be accessible
-  --check-no-public-access RESOURCE_TYPE
-                              Fail if a resource policy can be public
-```
-
-## Exit Codes
-
-- `0` - Success
-- `1` - Validation error (ERROR-level finding, a failed custom check, or a finding at or above `--fail-on`)
-- `2` - Configuration error (including a boto3 version that lacks a requested feature)
-- `3` - AWS API error (permissions, throttling after retries, service errors)
-- `4` - File I/O error
-
-## Policy File Format
-
-Policy files must be JSON format:
+The tool reads every `*.json` file in the directory (add `--recursive` for sub-directories),
+validates each one with IAM Access Analyzer, prints or writes the result, and exits with a
+code you can use in scripts. Policy files must be plain JSON policy documents:
 
 ```json
 {
   "Version": "2012-10-17",
   "Statement": [
-    {
-      "Effect": "Allow",
-      "Action": "s3:GetObject",
-      "Resource": "arn:aws:s3:::my-bucket/*"
-    }
+    {"Effect": "Allow", "Action": "s3:GetObject", "Resource": "arn:aws:s3:::my-bucket/*"}
   ]
 }
 ```
 
-Place all policy files in a directory and point to it with `--policies-path`.
+## Choose the AWS account
+
+```bash
+validate-aws-policies -d ./policies -p my-profile      # --profile
+AWS_PROFILE=my-profile validate-aws-policies -d ./policies
+```
+
+## Choose the policy type
+
+The default is `identity`. Policies of another type are checked against the wrong rules, and
+for example a resource policy with a `Principal` fails as an identity policy.
+
+```bash
+validate-aws-policies -d ./scps   --policy-type scp
+validate-aws-policies -d ./rcps   --policy-type rcp
+validate-aws-policies -d ./bucket-policies --policy-type resource --resource-type s3-bucket
+```
+
+See [Policy Types & Custom Checks](access-analyzer-features.md) for resource types, custom
+checks and validating several types in one run.
+
+## Output formats
+
+`--format` (`-f`) selects the output. `json` is the default.
+
+| Format | Where it goes | Use for |
+|---|---|---|
+| `json` | stdout | scripts (`jq`), other tools |
+| `text` | stdout | reading in a terminal |
+| `html` | `AccessAnalyzerReport_<YYYYMMDD_HHMMSS>.html` | people. [Sample](assets/sample-report.html) |
+| `md`, `markdown` | `AccessAnalyzerReport_<...>.md` | pull request comments, wikis |
+| `xml`, `junit` | `AccessAnalyzerReport_<...>.xml` | CI test reports, see [JUnit XML](JUNIT_XML_REPORT.md) |
+| `sarif` | `AccessAnalyzerReport_<...>.sarif` | GitHub code scanning |
+| `all` | html, md and xml files | archiving |
+
+File reports are written to the current directory. Use `--output FILE` (`-o`) to choose the
+path of a single-file format (parent directories are created). The extension must match the
+format: `.json`, `.txt` or `.text`, `.html`, `.md`, `.xml`, `.sarif` or `.json` for SARIF.
+`--output` cannot be used with `--format all`.
+
+### Reading the JSON
+
+```json
+[
+  {
+    "filePolicy": "my-policy.json",
+    "summary": [
+      {
+        "policyName": "my-policy",
+        "issueCode": "PASS_ROLE_WITH_STAR_IN_ACTION_AND_RESOURCE",
+        "findingType": "SECURITY_WARNING",
+        "details": {
+          "findingDetails": "Using wildcards (*) in the action and the resource can be overly permissive because it allows iam:PassRole permissions on all resources. ...",
+          "learnMoreLink": "https://docs.aws.amazon.com/IAM/latest/UserGuide/access-analyzer-reference-policy-checks.html#...",
+          "locations": [
+            {"path": [{"value": "Statement"}, {"index": 0}, {"value": "Action"}, {"index": 2}],
+             "span": {"start": {"line": 9, "column": 8, "offset": 136},
+                      "end": {"line": 9, "column": 15, "offset": 143}}}
+          ]
+        }
+      }
+    ]
+  }
+]
+```
+
+A policy without findings has one entry with `findingType` `None` and `details` `No findings`.
+`details` is the finding as returned by Access Analyzer. In `locations`, lines start at 1 and
+columns at 0. Text output and HTML reports show columns starting at 1.
+
+### Text output
+
+```text
+Policy Validation Results
+==================================================
+
+Policy: my-policy.json
+  - SECURITY_WARNING: PASS_ROLE_WITH_STAR_IN_ACTION_AND_RESOURCE
+      Using wildcards (*) in the action and the resource can be overly permissive ...
+      at line 9, column 9
+      https://docs.aws.amazon.com/IAM/latest/UserGuide/access-analyzer-reference-policy-checks.html#...
+```
+
+## Failure handling and exit codes
+
+| Code | Meaning |
+|---|---|
+| `0` | Success. Warnings and suggestions do not fail the run by default. |
+| `1` | An `ERROR` finding, a failed custom check, or a finding at or above `--fail-on`. |
+| `2` | Configuration error: bad arguments or config file, or a boto3 too old for a requested feature. |
+| `3` | AWS API error: missing permissions, expired credentials, throttling after retries. |
+| `4` | File error: policies directory or file missing or unreadable. |
+
+By default the run stops at the first `ERROR` finding. `--continue-on-error` and
+`--fail-on LEVEL` validate everything first, write the output and reports, and then decide
+the exit code. See [Failure handling](access-analyzer-features.md#failure-handling).
+
+## Reports, archives and S3
+
+```bash
+validate-aws-policies -d ./policies -f all --zip                 # reports_<timestamp>.zip
+validate-aws-policies -d ./policies -f html --upload -b my-bucket
+```
+
+Uploaded files go to `s3://<bucket>/AccessAnalyzer/<YYYY>/<MM>/<DD>/<file>`. `--upload`
+requires `--bucket` (and the reverse). Uploads retry with exponential backoff. `--dry-run`
+cannot be combined with `--upload` or `--zip`.
+
+## Dry run
+
+`--dry-run` validates and prints `json` or `text` results but does not write report files,
+create archives or upload.
+
+```bash
+validate-aws-policies -d ./policies --dry-run
+```
+
+## Logging
+
+Logs go to stderr, results to stdout, so `validate-aws-policies ... > results.json` works.
+
+| Option | Effect |
+|---|---|
+| (default) | INFO |
+| `--verbose` | DEBUG, including the full findings and merged configuration |
+| `--quiet` | ERROR only. Results on stdout are still printed. |
+| `--log-format json` | One JSON object per log line (`timestamp`, `level`, `message`, `module`, `function`) |
+
+The same settings can come from a config file (`verbose`, `quiet`, `log_format`) or the
+`LOG_LEVEL` environment variable. A command-line flag wins.
+
+## Options
+
+Run `validate-aws-policies --help` for the full list. The options are also tabulated in the
+[API Reference](api.md#command-line-options).
+
+`-c/--ci` is accepted for compatibility and currently has no effect. For pipelines use
+`--fail-on`, `--format xml` or `sarif`, and `--log-format json`.

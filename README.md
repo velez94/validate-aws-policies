@@ -1,138 +1,209 @@
-# Validate AWS policies 
+# validate-aws-policies
 
-This package validates AWS IAM policies (identity, resource, SCP and RCP) with the IAM Access Analyzer
-`ValidatePolicy` API and creates reports in HTML, Markdown or JUnit XML format.
+[![PyPI](https://img.shields.io/pypi/v/validate-aws-policies)](https://pypi.org/project/validate-aws-policies/)
+[![Python](https://img.shields.io/pypi/pyversions/validate-aws-policies)](https://pypi.org/project/validate-aws-policies/)
+[![Tests](https://github.com/velez94/validate-aws-policies/actions/workflows/test.yml/badge.svg)](https://github.com/velez94/validate-aws-policies/actions/workflows/test.yml)
+[![License](https://img.shields.io/badge/license-Apache%202.0-blue)](https://github.com/velez94/validate-aws-policies/blob/main/LICENSE)
 
-# Pre-Requirements
-Setup AWS Cli profile for interacting with IAM access analyzer API using IAM or SSO credentials.
+Validate AWS IAM policies from the command line or a CI/CD pipeline. The tool sends your policy
+JSON files to [IAM Access Analyzer](https://docs.aws.amazon.com/IAM/latest/UserGuide/what-is-access-analyzer.html),
+optionally runs Access Analyzer custom policy checks, and writes the results as JSON, text, HTML,
+Markdown, JUnit XML or SARIF.
 
-# Requirements 
+![Validation demo](https://raw.githubusercontent.com/velez94/validate-aws-policies/main/docs/img/rec_validate.gif)
 
-- python >= 3.8
+**Documentation:** <https://velez94.github.io/validate-aws-policies/>
+&middot; [Sample HTML report](https://velez94.github.io/validate-aws-policies/assets/sample-report.html)
+
+## Features
+
+- **Policy types:** identity, resource, service control (SCP) and resource control (RCP) policies, with resource-specific checks for S3 buckets, access points, role trust policies and DynamoDB tables.
+- **Custom policy checks:** fail a build when a policy grants new access compared to a baseline, grants actions or resources you have forbidden, or can be public.
+- **Reports:** JSON, text, a self-contained HTML report, Markdown, JUnit XML (CodeBuild, Azure Pipelines, Jenkins, GitLab) and SARIF (GitHub code scanning).
+- **Built for pipelines:** specific exit codes, `--fail-on` severity thresholds, `--dry-run`, JSON logs, S3 upload and ZIP archives.
+- **Configuration:** command line, YAML or TOML file, and environment variables, with a documented precedence.
+- **Compatible:** upgrading inside 3.x never removes a flag, config key or exit code. Newer API features are used only when your installed boto3 supports them.
 
 ## Install
 
-```commandline
-$ pip install --upgrade validate-aws-policies
-```
-### From AWS CodeArtifacts repository
+Requires Python 3.8 or newer.
 
->You must have a user into AWS account Sophos Organization, it could be for projects, products, or IT internal Organizations.
-> Before create AWS CLI profile using [AWS IAM Identity Center (SSO)](https://docs.aws.amazon.com/cli/latest/userguide/sso-configure-profile-token.html) or IAM.
-
-
-1. Configure your pip cli for download package from private CodeArtifacts repository 
-
-```commandline 
-
-$ aws codeartifact login --tool pip --repository <repository_name> --domain <domain> --domain-owner <123456789012>  --profile <profile_name> --region <repository_region>
-$ pip install --upgrade validate-aws-policies
-
-```
-### From Azure Artifacts repository
-
-#### Project setup
-Ensure you have installed the latest version of the Azure Artifacts keyring from the "Get the tools" menu.
-
-If you don't already have one, create a virtualenv using [these instructions](https://go.microsoft.com/fwlink/?linkid=2103878) from the official Python documentation. Per the instructions, "it is always recommended to use a virtualenv while developing Python applications."
-
-Add a pip.ini (Windows) or pip.conf (Mac/Linux) file to your virtualenv
-
-```
-[global]
-index-url=https://pkgs.dev.azure.com/<organizations>/.../_packaging/.../pypi/simple/
-
-```
-# Instructions
-
-```commandline
-validate-aws-policies -h
-usage: validate-aws-policies [-h] [-v] [--config FILE] [-d PATH] [-t {identity,resource,scp,rcp}]
-                             [-p NAME] [-f {json,text,html,md,markdown,xml,junit,sarif,all}] [-o FILE] [-z]
-                             [-u] [-b NAME] [-c] [--dry-run] [--verbose | --quiet]
-                             [--log-format {text,json}]
-
-options:
-  -h, --help            show this help message and exit
-  -v, --version         Print the package version and exit
-  --config FILE         Path to configuration file (YAML or TOML format)
-  -d, --policies-path PATH
-                        Directory path containing policy files in JSON format
-  -t, --policy-type {identity,resource,scp,rcp}
-                        Type of policies in the directory (default: identity)
-  --resource-type TYPE  Resource type for resource policies (s3-bucket, trust-policy, ...)
-  --locale LOCALE       Language of the finding messages (default: EN)
-  --max-findings N      Collect at most N findings per policy (default: all)
-  -r, --recursive       Also validate *.json files in sub-directories
-  --continue-on-error   Validate everything, write reports, then exit 1 on any ERROR
-  --fail-on LEVEL       Exit 1 at this severity or higher: error, security-warning,
-                        warning, suggestion, none
-  -p, --profile NAME    AWS CLI profile name for Access Analyzer API
-  -f, --format          Output format (default: json). Use xml/junit for CI/CD integration
-  -o, --output FILE     Output file path
-  -z, --zip             Create ZIP archive of generated reports
-  -u, --upload          Upload generated reports to S3 bucket
-  -b, --bucket NAME     S3 bucket name (required with --upload)
-  -c, --ci              Run in CI/CD pipeline mode
-  --dry-run             Validate without creating reports or uploading
-  --verbose / --quiet   DEBUG or ERROR-only logging
-  --log-format          Log output format: text or json
-
-custom policy checks (identity and resource policies; billed per API call):
-  --check-no-new-access        Fail if a policy grants more than its baseline in --reference-path
-  --check-access-not-granted   Fail if --deny-actions / --deny-resources are granted
-  --check-no-public-access RESOURCE_TYPE
-                               Fail if a resource policy can be public (for example s3-bucket)
+```bash
+pip install --upgrade validate-aws-policies
+# or, isolated:
+pipx install validate-aws-policies
 ```
 
-See `docs/access-analyzer-features.md` for policy types, custom checks, policy sets,
-SARIF output and CI examples.
+From a private repository (AWS CodeArtifact or Azure Artifacts), see the
+[installation guide](https://velez94.github.io/validate-aws-policies/installation/).
 
-Exit codes: `0` success, `1` validation error, `2` configuration error, `3` AWS API error, `4` file error.
+## AWS access
 
-Settings can also come from a YAML/TOML file (`--config`) and the environment variables
-`AWS_PROFILE`, `REPORTS_BUCKET`, `POLICIES_PATH` and `LOG_LEVEL`. Precedence, lowest to highest:
-defaults, config file, environment variables, CLI arguments. See `config.example.yaml`.
+Use any AWS credentials the SDK supports, for example an IAM Identity Center (SSO) profile:
 
-# Examples 
-
-
-```commandline
-validate-aws-policies -d project_configurations/policies/ -p sh-devsecops --format html
-
-# Validate service control policies and write a JUnit report for CI
-validate-aws-policies -d scps/ --policy-type scp --format xml
-
-# Fail a pull request when a policy grants more access than the baseline
-validate-aws-policies -d policies/ --check-no-new-access --reference-path baseline/ --format sarif
+```bash
+aws configure sso
+aws sso login --profile my-profile
 ```
-![Example_validate_pol](docs/img/rec_validate.gif)
 
-The previous command create a report in the current folder with the syntax name: `AccessAnalyzerReport_2023-06-26 155116.844676.html`.
-For example:
+The credentials need `access-analyzer:ValidatePolicy`. Custom checks need
+`access-analyzer:CheckNoNewAccess`, `CheckAccessNotGranted` and `CheckNoPublicAccess`, and
+`--upload` needs `s3:PutObject`. Policy validation is free. Custom checks are billed per API
+call, see the [pricing page](https://aws.amazon.com/iam/access-analyzer/pricing/).
 
-![report](docs/img/report_image.png)
+## Quick start
 
+```bash
+# Validate every *.json file in a directory (JSON on stdout)
+validate-aws-policies --policies-path ./policies --profile my-profile
 
-## Extras
-### Enable autocomplete
-Argcomplete provides easy, extensible command line tab completion of arguments for your Python application.
+# Human readable output
+validate-aws-policies -d ./policies -f text
 
-It makes two assumptions:
+# Self-contained HTML report: AccessAnalyzerReport_<YYYYMMDD_HHMMSS>.html
+validate-aws-policies -d ./policies -f html
 
-* You’re using bash or zsh as your shell
+# Service control policies, failing the build on any warning
+validate-aws-policies -d ./scps --policy-type scp --fail-on warning
 
-* You’re using argparse to manage your command line arguments/options
+# JUnit XML for a CI test report
+validate-aws-policies -d ./policies -f xml -o reports/policies.xml
 
-Argcomplete is particularly useful if your program has lots of options or subparsers, and if your program can dynamically suggest completions for your argument/option values (for example, if the user is browsing resources over the network).
-Run: 
+# Block changes that grant more access than the approved baseline
+validate-aws-policies -d ./policies --check-no-new-access --reference-path ./baseline
+
+# SARIF for GitHub code scanning
+validate-aws-policies -d ./policies --recursive -f sarif -o results.sarif
+```
+
+Text output shows each finding with its message, line, column and a link to the AWS explanation:
+
+```text
+Policy: my-policy.json
+  - SECURITY_WARNING: PASS_ROLE_WITH_STAR_IN_ACTION_AND_RESOURCE
+      Using wildcards (*) in the action and the resource can be overly permissive because it allows iam:PassRole ...
+      at line 9, column 9
+      https://docs.aws.amazon.com/IAM/latest/UserGuide/access-analyzer-reference-policy-checks.html#...
+```
+
+## Options
+
+```text
+-d, --policies-path PATH   Directory with policy *.json files
+-r, --recursive            Also read sub-directories
+-t, --policy-type TYPE     identity (default), resource, scp, rcp
+    --resource-type TYPE   For resource policies: s3-bucket, s3-access-point, s3-mrap,
+                           s3-object-lambda, trust-policy, dynamodb-table
+-p, --profile NAME         AWS profile
+-f, --format FORMAT        json (default), text, html, md, xml, junit, sarif, all
+-o, --output FILE          Output file for single-file formats
+-z, --zip                  ZIP the generated reports
+-u, --upload -b BUCKET     Upload reports to s3://BUCKET/AccessAnalyzer/YYYY/MM/DD/
+    --dry-run              Validate without writing reports or uploading
+    --continue-on-error    Validate everything, report, then exit 1 on any ERROR
+    --fail-on LEVEL        error, security-warning, warning, suggestion, none
+    --locale LOCALE        Language of the finding messages (default EN)
+    --max-findings N       Collect at most N findings per policy
+    --config FILE          YAML or TOML configuration file
+    --verbose | --quiet    DEBUG or ERROR-only logs (logs go to stderr)
+    --log-format FORMAT    text or json
+-v, --version
+
+Custom policy checks (identity and resource policies):
+    --check-no-new-access  with --reference-path DIR [--strict-references]
+    --check-access-not-granted  with --deny-actions A,B and/or --deny-resources ARN,ARN
+    --check-no-public-access RESOURCE_TYPE   for example s3-bucket
+```
+
+Run `validate-aws-policies --help` for the complete list.
+
+### Exit codes
+
+| Code | Meaning |
+|---|---|
+| 0 | Success (warnings and suggestions do not fail the run by default) |
+| 1 | An `ERROR` finding, a failed custom check, or a finding at or above `--fail-on` |
+| 2 | Configuration error, or a boto3 version too old for a requested feature |
+| 3 | AWS API error or failed S3 upload |
+| 4 | Policy file or directory not found or unreadable |
+
+By default the run stops at the first `ERROR` finding. With `--continue-on-error` or
+`--fail-on` it validates every policy and writes the reports before exiting.
+
+## Configuration file
+
+```yaml
+# config.yaml
+profile: my-profile
+policy_type: identity
+policies_path: ./policies
+format: html
+fail_on: error
+
+# Several policy types in one run
+# policy_sets:
+#   - {path: ./scps,   policy_type: scp}
+#   - {path: ./trust,  policy_type: resource, resource_type: trust-policy}
+```
+
+```bash
+validate-aws-policies --config config.yaml
+```
+
+Precedence, lowest to highest: defaults, config file, environment variables (`AWS_PROFILE`,
+`POLICIES_PATH`, `REPORTS_BUCKET`, `LOG_LEVEL`), command-line arguments. See
+`config.example.yaml` and `config.example.toml`, and the
+[configuration guide](https://velez94.github.io/validate-aws-policies/configuration/).
+
+## CI/CD
+
+GitHub Actions, uploading SARIF results to code scanning:
+
+```yaml
+- run: pip install validate-aws-policies
+- run: validate-aws-policies -d policies --recursive --fail-on error -f sarif -o results.sarif
+- if: always()
+  uses: github/codeql-action/upload-sarif@v3
+  with: {sarif_file: results.sarif}
+```
+
+AWS CodeBuild, publishing a test report:
+
+```yaml
+phases:
+  build:
+    commands:
+      - validate-aws-policies -d policies -f xml -o reports/policies.xml
+reports:
+  policy-validation:
+    files: ['reports/policies.xml']
+    file-format: JUNITXML
+```
+
+More pipelines (GitLab, Jenkins, Azure) and baseline comparisons are in the
+[examples](https://velez94.github.io/validate-aws-policies/examples/).
+
+## Shell completion
+
 ```bash
 activate-global-python-argcomplete
+echo 'eval "$(register-python-argcomplete validate-aws-policies)"' >> ~/.bashrc   # or ~/.zshrc
 ```
-and to make sure that bash knows about this script, you use
+
+## Contributing
+
 ```bash
+git clone https://github.com/velez94/validate-aws-policies.git
+cd validate-aws-policies
+pip install -e ".[dev,docs]"
+pytest && ruff check src && mkdocs build --strict
+```
 
-echo 'eval "$(register-python-argcomplete validate-aws-policies)"' >> ~/.bashrc
-source ~/.bashrc
+See the [development guide](https://velez94.github.io/validate-aws-policies/development/) for
+the compatibility rules and the release process. Report problems in
+[GitHub Issues](https://github.com/velez94/validate-aws-policies/issues). Changes are listed in
+[CHANGELOG.md](https://github.com/velez94/validate-aws-policies/blob/main/CHANGELOG.md).
 
-```
+## License
+
+Apache License 2.0, see [LICENSE](https://github.com/velez94/validate-aws-policies/blob/main/LICENSE).

@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="generator" content="validate-aws-policies v3.1.1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src data:">
+<title>AWS Policy Validation Report</title>
+<style>
+:root{
+  --bg:#f4f6f9;--surface:#fff;--surface-2:#f0f3f7;--text:#16191f;--muted:#5f6b7a;
+  --border:#d9dfe7;--accent:#0972d3;--shadow:0 1px 2px rgba(15,25,40,.08),0 4px 14px rgba(15,25,40,.06);
+  --err:#c62828;--err-bg:#fdeceb;--sec:#c2410c;--sec-bg:#fff0e6;
+  --warn:#946200;--warn-bg:#fff6dc;--sug:#1b6e3c;--sug-bg:#e8f5ec;--ok:#1b6e3c;--ok-bg:#e8f5ec;
+  --code-bg:#f6f8fa;
+}
+:root[data-theme=dark]{
+  --bg:#0f1520;--surface:#18202d;--surface-2:#202a3a;--text:#e6ebf2;--muted:#93a1b5;
+  --border:#2c3a4f;--accent:#58a6ff;--shadow:0 1px 2px rgba(0,0,0,.4),0 4px 14px rgba(0,0,0,.3);
+  --err:#ff8a80;--err-bg:#3a1c1f;--sec:#ffab70;--sec-bg:#3a2617;
+  --warn:#ffd166;--warn-bg:#3a3017;--sug:#7ee0a0;--sug-bg:#17301f;--ok:#7ee0a0;--ok-bg:#17301f;
+  --code-bg:#111823;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme=light]){
+    --bg:#0f1520;--surface:#18202d;--surface-2:#202a3a;--text:#e6ebf2;--muted:#93a1b5;
+    --border:#2c3a4f;--accent:#58a6ff;--shadow:0 1px 2px rgba(0,0,0,.4),0 4px 14px rgba(0,0,0,.3);
+    --err:#ff8a80;--err-bg:#3a1c1f;--sec:#ffab70;--sec-bg:#3a2617;
+    --warn:#ffd166;--warn-bg:#3a3017;--sug:#7ee0a0;--sug-bg:#17301f;--ok:#7ee0a0;--ok-bg:#17301f;
+    --code-bg:#111823;
+  }
+}
+*{box-sizing:border-box}
+html{color-scheme:light dark}
+body{margin:0;background:var(--bg);color:var(--text);line-height:1.55;
+  font:15px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif}
+a{color:var(--accent)}
+code,pre,.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace}
+.wrap{max-width:1180px;margin:0 auto;padding:24px 20px 56px}
+header.top{display:flex;gap:16px;align-items:flex-start;justify-content:space-between;
+  flex-wrap:wrap;margin-bottom:20px}
+h1{font-size:1.6rem;margin:0 0 4px;letter-spacing:-.01em}
+.sub{color:var(--muted);font-size:.9rem}
+.btn{background:var(--surface);color:var(--text);border:1px solid var(--border);
+  border-radius:8px;padding:6px 12px;font:inherit;font-size:.85rem;cursor:pointer}
+.btn:hover{background:var(--surface-2)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.verdict{display:flex;align-items:center;gap:14px;border-radius:12px;padding:16px 20px;
+  box-shadow:var(--shadow);border:1px solid var(--border);margin-bottom:18px;background:var(--surface)}
+.verdict .icon{font-size:1.6rem;line-height:1}
+.verdict h2{margin:0;font-size:1.1rem}
+.verdict p{margin:2px 0 0;color:var(--muted);font-size:.9rem}
+.verdict.fail{border-left:6px solid var(--err)}.verdict.fail .icon{color:var(--err)}
+.verdict.warn{border-left:6px solid var(--warn)}.verdict.warn .icon{color:var(--warn)}
+.verdict.pass{border-left:6px solid var(--ok)}.verdict.pass .icon{color:var(--ok)}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:18px}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 16px;
+  box-shadow:var(--shadow);text-align:left;font:inherit;color:inherit}
+button.card{cursor:pointer}
+button.card:hover{border-color:var(--accent)}
+button.card[aria-pressed=true]{outline:2px solid var(--accent)}
+.card .n{display:block;font-size:1.8rem;font-weight:700;line-height:1.1}
+.card .l{color:var(--muted);font-size:.8rem;text-transform:uppercase;letter-spacing:.04em}
+.card.sev-error .n{color:var(--err)}.card.sev-security .n{color:var(--sec)}
+.card.sev-warning .n{color:var(--warn)}.card.sev-suggestion .n{color:var(--sug)}
+.card.ok .n{color:var(--ok)}
+.meta{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 18px;
+  margin-bottom:18px;box-shadow:var(--shadow);display:grid;gap:6px;font-size:.88rem}
+.meta b{color:var(--muted);font-weight:600;margin-right:6px}
+.chip{display:inline-block;border:1px solid var(--border);background:var(--surface-2);
+  border-radius:999px;padding:1px 10px;font-size:.78rem;margin:0 4px 2px 0}
+.toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
+.toolbar input[type=search]{flex:1 1 240px;min-width:200px;padding:8px 12px;border-radius:8px;
+  border:1px solid var(--border);background:var(--surface);color:var(--text);font:inherit}
+.toolbar label{font-size:.85rem;color:var(--muted);display:flex;gap:6px;align-items:center}
+.policy{background:var(--surface);border:1px solid var(--border);border-radius:12px;
+  margin-bottom:10px;box-shadow:var(--shadow);overflow:hidden}
+.policy>summary{list-style:none;cursor:pointer;display:flex;gap:10px;align-items:center;
+  padding:12px 16px;flex-wrap:wrap}
+.policy>summary::-webkit-details-marker{display:none}
+.policy>summary::before{content:"\25B8";color:var(--muted);transition:transform .15s}
+.policy[open]>summary::before{transform:rotate(90deg)}
+.policy .name{font-weight:600;word-break:break-all}
+.policy .counts{margin-left:auto;display:flex;gap:6px;flex-wrap:wrap}
+.policy .body{padding:2px 16px 16px;border-top:1px solid var(--border)}
+.badge{display:inline-flex;gap:5px;align-items:center;border-radius:6px;padding:1px 8px;
+  font-size:.75rem;font-weight:700;letter-spacing:.02em;white-space:nowrap}
+.badge.sev-error{background:var(--err-bg);color:var(--err)}
+.badge.sev-security{background:var(--sec-bg);color:var(--sec)}
+.badge.sev-warning{background:var(--warn-bg);color:var(--warn)}
+.badge.sev-suggestion{background:var(--sug-bg);color:var(--sug)}
+.badge.ok{background:var(--ok-bg);color:var(--ok)}
+.finding{border:1px solid var(--border);border-left-width:5px;border-radius:8px;padding:10px 14px;
+  margin-top:10px;background:var(--surface)}
+.finding.sev-error{border-left-color:var(--err)}.finding.sev-security{border-left-color:var(--sec)}
+.finding.sev-warning{border-left-color:var(--warn)}.finding.sev-suggestion{border-left-color:var(--sug)}
+.finding .head{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.finding .code{font-size:.85rem}
+.finding .msg{margin:6px 0 4px;white-space:pre-wrap;word-break:break-word}
+.finding .facts{color:var(--muted);font-size:.82rem;display:flex;gap:14px;flex-wrap:wrap}
+.reasons{margin:6px 0 0;padding-left:20px;font-size:.88rem}
+details.raw{margin-top:8px}
+details.raw summary{cursor:pointer;color:var(--muted);font-size:.82rem}
+pre{background:var(--code-bg);border:1px solid var(--border);border-radius:8px;padding:10px 12px;
+  overflow:auto;font-size:.8rem;margin:6px 0 0}
+.clean{color:var(--ok);margin-top:12px}
+.checks{margin-top:12px;display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.checks .t{color:var(--muted);font-size:.82rem}
+.empty{display:none;text-align:center;color:var(--muted);padding:30px}
+footer{margin-top:28px;color:var(--muted);font-size:.82rem;text-align:center}
+[hidden]{display:none!important}
+@media print{
+  body{background:#fff;color:#000}.toolbar,.btn,button.card:after{display:none!important}
+  .policy>.body{display:block}.card,.policy,.verdict,.meta{box-shadow:none}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header class="top">
+  <div>
+    <h1>AWS Policy Validation Report</h1>
+    <div class="sub">IAM Access Analyzer · generated 2026-11-19 17:03:29</div>
+  </div>
+  <button type="button" class="btn" id="theme" aria-label="Toggle light and dark theme">Theme</button>
+</header>
+<div class="verdict fail" role="status"><span class="icon" aria-hidden="true">✖</span><div><h2>Validation failed</h2><p>3 error(s) must be fixed before these policies can be used.</p></div></div>
+<section class="cards" aria-label="Summary"><div class="card"><span class="n">5</span><span class="l">Policies</span></div><div class="card ok"><span class="n">2</span><span class="l">Clean</span></div><button type="button" class="card sev-error" data-sev="ERROR" aria-pressed="false" title="Filter by error"><span class="n">3</span><span class="l">Errors</span></button><button type="button" class="card sev-security" data-sev="SECURITY_WARNING" aria-pressed="false" title="Filter by security warning"><span class="n">0</span><span class="l">Security warnings</span></button><button type="button" class="card sev-warning" data-sev="WARNING" aria-pressed="false" title="Filter by warning"><span class="n">1</span><span class="l">Warnings</span></button><button type="button" class="card sev-suggestion" data-sev="SUGGESTION" aria-pressed="false" title="Filter by suggestion"><span class="n">0</span><span class="l">Suggestions</span></button></section>
+<section class="meta" aria-label="Run details"><div><b>Policy sets</b><span class="chip mono">ident · identity</span><span class="chip mono">warnonly · identity</span><span class="chip mono">bucket · resource</span></div><div><b>Custom checks</b><span class="chip">CheckNoNewAccess</span><span class="chip">CheckAccessNotGranted</span><span class="chip">CheckNoPublicAccess</span></div><div><b>Locale</b>EN</div></section>
+<div class="toolbar" id="tools" hidden>
+  <input type="search" id="q" placeholder="Search policy, issue code or message" aria-label="Search findings">
+  <label><input type="checkbox" id="only"> Only policies with findings</label>
+  <button type="button" class="btn" id="expand">Expand all</button>
+  <button type="button" class="btn" id="collapse">Collapse all</button>
+</div>
+<main id="policies"><details class="policy" open data-name="ident/p.json"><summary><span class="name mono">ident/p.json</span><span class="counts"><span class="badge sev-error"><span aria-hidden="true">✖</span>Error</span><span class="sub">×2</span></span></summary><div class="body"><div class="finding sev-error" data-sev="ERROR" data-search="error check_no_new_access the modified permissions grant new access compared to your existing policy."><div class="head"><span class="badge sev-error"><span aria-hidden="true">✖</span>Error</span><span class="code mono">CHECK_NO_NEW_ACCESS</span></div><p class="msg">The modified permissions grant new access compared to your existing policy.</p><ul class="reasons"><li>New access in the statement with index: 0. <span class='sub'>(index 0)</span></li></ul><div class="facts"><span>Custom policy check</span> <span><a href="https://docs.aws.amazon.com/IAM/latest/UserGuide/access-analyzer-custom-policy-checks.html" target="_blank" rel="noopener noreferrer">Learn more</a></span></div><details class="raw"><summary>Raw finding</summary><pre>{
+  &quot;source&quot;: &quot;custom_check&quot;,
+  &quot;check&quot;: &quot;CHECK_NO_NEW_ACCESS&quot;,
+  &quot;findingDetails&quot;: &quot;The modified permissions grant new access compared to your existing policy.&quot;,
+  &quot;message&quot;: &quot;The modified permissions grant new access compared to your existing policy.&quot;,
+  &quot;reasons&quot;: [
+    {
+      &quot;description&quot;: &quot;New access in the statement with index: 0.&quot;,
+      &quot;statementIndex&quot;: 0
+    }
+  ],
+  &quot;learnMoreLink&quot;: &quot;https://docs.aws.amazon.com/IAM/latest/UserGuide/access-analyzer-custom-policy-checks.html&quot;
+}</pre></details></div><div class="finding sev-error" data-sev="ERROR" data-search="error check_access_not_granted the policy document grants access to perform one or more of the listed actions."><div class="head"><span class="badge sev-error"><span aria-hidden="true">✖</span>Error</span><span class="code mono">CHECK_ACCESS_NOT_GRANTED</span></div><p class="msg">The policy document grants access to perform one or more of the listed actions.</p><ul class="reasons"><li>One or more of the listed actions in the statement with index: 0. <span class='sub'>(index 0)</span></li></ul><div class="facts"><span>Custom policy check</span> <span><a href="https://docs.aws.amazon.com/IAM/latest/UserGuide/access-analyzer-custom-policy-checks.html" target="_blank" rel="noopener noreferrer">Learn more</a></span></div><details class="raw"><summary>Raw finding</summary><pre>{
+  &quot;source&quot;: &quot;custom_check&quot;,
+  &quot;check&quot;: &quot;CHECK_ACCESS_NOT_GRANTED&quot;,
+  &quot;findingDetails&quot;: &quot;The policy document grants access to perform one or more of the listed actions.&quot;,
+  &quot;message&quot;: &quot;The policy document grants access to perform one or more of the listed actions.&quot;,
+  &quot;reasons&quot;: [
+    {
+      &quot;description&quot;: &quot;One or more of the listed actions in the statement with index: 0.&quot;,
+      &quot;statementIndex&quot;: 0
+    }
+  ],
+  &quot;learnMoreLink&quot;: &quot;https://docs.aws.amazon.com/IAM/latest/UserGuide/access-analyzer-custom-policy-checks.html&quot;
+}</pre></details></div><div class="checks"><span class="t">Custom checks</span><span class="badge sev-error"><span aria-hidden="true">✖</span>CHECK_NO_NEW_ACCESS: FAIL</span><span class="badge sev-error"><span aria-hidden="true">✖</span>CHECK_ACCESS_NOT_GRANTED: FAIL</span></div></div></details><details class="policy" data-name="ident/same.json"><summary><span class="name mono">ident/same.json</span><span class="counts"><span class="badge ok"><span aria-hidden="true">✔</span>Clean</span></span></summary><div class="body"><p class="clean">No findings. The policy passed validation.</p><div class="checks"><span class="t">Custom checks</span><span class="badge ok"><span aria-hidden="true">✔</span>CHECK_NO_NEW_ACCESS: PASS</span><span class="badge ok"><span aria-hidden="true">✔</span>CHECK_ACCESS_NOT_GRANTED: PASS</span></div></div></details><details class="policy" open data-name="warnonly/invalid-missing-version.json"><summary><span class="name mono">warnonly/invalid-missing-version.json</span><span class="counts"><span class="badge sev-warning"><span aria-hidden="true">⚠</span>Warning</span><span class="sub">×1</span></span></summary><div class="body"><div class="finding sev-warning" data-sev="WARNING" data-search="warning missing_version we recommend that you specify the version element to help you with debugging permission issues."><div class="head"><span class="badge sev-warning"><span aria-hidden="true">⚠</span>Warning</span><span class="code mono">MISSING_VERSION</span></div><p class="msg">We recommend that you specify the Version element to help you with debugging permission issues.</p><div class="facts"><span>Line 1, column 1</span> <span><a href="https://docs.aws.amazon.com/IAM/latest/UserGuide/access-analyzer-reference-policy-checks.html#access-analyzer-reference-policy-checks-general-warning-missing-version" target="_blank" rel="noopener noreferrer">Learn more</a></span></div><details class="raw"><summary>Raw finding</summary><pre>{
+  &quot;findingDetails&quot;: &quot;We recommend that you specify the Version element to help you with debugging permission issues.&quot;,
+  &quot;findingType&quot;: &quot;WARNING&quot;,
+  &quot;issueCode&quot;: &quot;MISSING_VERSION&quot;,
+  &quot;learnMoreLink&quot;: &quot;https://docs.aws.amazon.com/IAM/latest/UserGuide/access-analyzer-reference-policy-checks.html#access-analyzer-reference-policy-checks-general-warning-missing-version&quot;,
+  &quot;locations&quot;: [
+    {
+      &quot;path&quot;: [],
+      &quot;span&quot;: {
+        &quot;start&quot;: {
+          &quot;line&quot;: 1,
+          &quot;column&quot;: 0,
+          &quot;offset&quot;: 0
+        },
+        &quot;end&quot;: {
+          &quot;line&quot;: 9,
+          &quot;column&quot;: 1,
+          &quot;offset&quot;: 115
+        }
+      }
+    }
+  ]
+}</pre></details></div><div class="checks"><span class="t">Custom checks</span><span class="badge sev-warning"><span aria-hidden="true">–</span>CHECK_NO_NEW_ACCESS: SKIPPED</span><span class="badge ok"><span aria-hidden="true">✔</span>CHECK_ACCESS_NOT_GRANTED: PASS</span></div></div></details><details class="policy" data-name="bucket/private.json"><summary><span class="name mono">bucket/private.json</span><span class="counts"><span class="badge ok"><span aria-hidden="true">✔</span>Clean</span></span></summary><div class="body"><p class="clean">No findings. The policy passed validation.</p><div class="checks"><span class="t">Custom checks</span><span class="badge sev-warning"><span aria-hidden="true">–</span>CHECK_NO_NEW_ACCESS: SKIPPED</span><span class="badge ok"><span aria-hidden="true">✔</span>CHECK_ACCESS_NOT_GRANTED: PASS</span><span class="badge ok"><span aria-hidden="true">✔</span>CHECK_NO_PUBLIC_ACCESS: PASS</span></div></div></details><details class="policy" open data-name="bucket/public.json"><summary><span class="name mono">bucket/public.json</span><span class="counts"><span class="badge sev-error"><span aria-hidden="true">✖</span>Error</span><span class="sub">×1</span></span></summary><div class="body"><div class="finding sev-error" data-sev="ERROR" data-search="error check_no_public_access the resource policy grants public access for the given resource type."><div class="head"><span class="badge sev-error"><span aria-hidden="true">✖</span>Error</span><span class="code mono">CHECK_NO_PUBLIC_ACCESS</span></div><p class="msg">The resource policy grants public access for the given resource type.</p><ul class="reasons"><li>Public access granted in the following statement with index: 0. <span class='sub'>(index 0)</span></li></ul><div class="facts"><span>Custom policy check</span> <span><a href="https://docs.aws.amazon.com/IAM/latest/UserGuide/access-analyzer-custom-policy-checks.html" target="_blank" rel="noopener noreferrer">Learn more</a></span></div><details class="raw"><summary>Raw finding</summary><pre>{
+  &quot;source&quot;: &quot;custom_check&quot;,
+  &quot;check&quot;: &quot;CHECK_NO_PUBLIC_ACCESS&quot;,
+  &quot;findingDetails&quot;: &quot;The resource policy grants public access for the given resource type.&quot;,
+  &quot;message&quot;: &quot;The resource policy grants public access for the given resource type.&quot;,
+  &quot;reasons&quot;: [
+    {
+      &quot;description&quot;: &quot;Public access granted in the following statement with index: 0.&quot;,
+      &quot;statementIndex&quot;: 0
+    }
+  ],
+  &quot;learnMoreLink&quot;: &quot;https://docs.aws.amazon.com/IAM/latest/UserGuide/access-analyzer-custom-policy-checks.html&quot;
+}</pre></details></div><div class="checks"><span class="t">Custom checks</span><span class="badge sev-warning"><span aria-hidden="true">–</span>CHECK_NO_NEW_ACCESS: SKIPPED</span><span class="badge ok"><span aria-hidden="true">✔</span>CHECK_ACCESS_NOT_GRANTED: PASS</span><span class="badge sev-error"><span aria-hidden="true">✖</span>CHECK_NO_PUBLIC_ACCESS: FAIL</span></div></div></details>
+<div class="empty" id="none">No policies match the current filters.</div>
+</main>
+<footer>validate-aws-policies v3.1.1 · IAM Access Analyzer</footer>
+</div>
+<script>
+(function(){
+  var root=document.documentElement,doc=document;
+  root.className+=" js";
+  var saved=null;try{saved=localStorage.getItem("vap-theme");}catch(e){}
+  if(saved){root.setAttribute("data-theme",saved);}
+  var tb=doc.getElementById("theme");
+  if(tb){tb.onclick=function(){
+    var dark=root.getAttribute("data-theme")==="dark"||
+      (!root.getAttribute("data-theme")&&window.matchMedia&&
+        window.matchMedia("(prefers-color-scheme: dark)").matches);
+    var next=dark?"light":"dark";root.setAttribute("data-theme",next);
+    try{localStorage.setItem("vap-theme",next);}catch(e){}
+  };}
+  var tools=doc.getElementById("tools");if(tools){tools.hidden=false;}
+  var policies=[].slice.call(doc.querySelectorAll(".policy"));
+  var active={};var search=doc.getElementById("q");var only=doc.getElementById("only");
+  var cards=[].slice.call(doc.querySelectorAll("button.card[data-sev]"));
+  function apply(){
+    var q=(search.value||"").toLowerCase(),any=Object.keys(active).length>0,shown=0;
+    policies.forEach(function(p){
+      var finds=[].slice.call(p.querySelectorAll(".finding")),vis=0;
+      finds.forEach(function(f){
+        var ok=(!any||active[f.getAttribute("data-sev")])&&
+          (!q||f.getAttribute("data-search").indexOf(q)>-1);
+        f.hidden=!ok;if(ok){vis++;}
+      });
+      var nameMatch=q&&p.getAttribute("data-name").indexOf(q)>-1;
+      var show=true;
+      if(any||q){show=vis>0||(nameMatch&&!any);}
+      if(only.checked&&finds.length===0){show=false;}
+      p.hidden=!show;if(show){shown++;}
+    });
+    doc.getElementById("none").style.display=shown?"none":"block";
+  }
+  cards.forEach(function(c){c.onclick=function(){
+    var s=c.getAttribute("data-sev");
+    if(active[s]){delete active[s];c.setAttribute("aria-pressed","false");}
+    else{active[s]=1;c.setAttribute("aria-pressed","true");}
+    apply();
+  };});
+  search.oninput=apply;only.onchange=apply;
+  doc.getElementById("expand").onclick=function(){policies.forEach(function(p){p.open=true;});};
+  doc.getElementById("collapse").onclick=function(){policies.forEach(function(p){p.open=false;});};
+  window.addEventListener("beforeprint",function(){policies.forEach(function(p){p.open=true;});});
+})();
+</script>
+</body>
+</html>

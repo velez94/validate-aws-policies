@@ -4,7 +4,7 @@ A Python CLI (PyPI package `validate_aws_policies`, current version 3.2.0) that 
 
 - Author: Alejandro Velez (labvel.io). Repo: github.com/velez94/validate-aws-policies. License: Apache 2.0.
 - Entry point: `validate-aws-policies` -> `validate_aws_policies.validate_policies:main`.
-- Docs: `docs/` (mkdocs-material, see `mkdocs.yml`), plus `CODEBUILD_INTEGRATION.md` and `docs/JUNIT_XML_REPORT.md`.
+- Docs: `docs/` (mkdocs-material, see `mkdocs.yml`), published to GitHub Pages at https://velez94.github.io/validate-aws-policies/ by `.github/workflows/docs.yml`. `docs/changelog.md` includes the root `CHANGELOG.md`.
 
 ## What it does
 

@@ -6,6 +6,18 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 <!-- insertion marker -->
+## [Unreleased]
+
+### Fixed
+
+- `verbose`, `quiet` and `log_format` in a config file and the `LOG_LEVEL` environment variable are now applied. They were ignored before. `verbose` and `quiet` together in a file is a configuration error.
+- A failed S3 upload now exits with code 3. It exited 0 before.
+
+### Changed
+
+- The `--ci` help text says the flag currently has no effect.
+- Documentation rewritten for 3.2 and published with GitHub Pages.
+
 ## [3.2.0]
 
 All changes are backward compatible: existing flags, config keys, exit codes and the

@@ -64,7 +64,7 @@ A validation script `scripts/validate_junit_xml.py` has been created to verify X
 
 ```bash
 # Run policy validation
-python -m validate_aws_policies --format xml --directory-policies-path ./policies
+python -m validate_aws_policies --format xml --policies-path ./policies
 
 # Validate the generated XML
 python3 scripts/validate_junit_xml.py AccessAnalyzerReport_*.xml
@@ -90,7 +90,7 @@ version: 0.2
 phases:
   build:
     commands:
-      - python -m validate_aws_policies --format xml --directory-policies-path ./policies
+      - python -m validate_aws_policies --format xml --policies-path ./policies
 
 reports:
   policy-validation:

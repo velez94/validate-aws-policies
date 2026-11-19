@@ -1,139 +1,135 @@
 # Configuration
 
-## Configuration File
+Every option can be set on the command line, in a YAML or TOML file (`--config FILE`), or,
+for a few of them, in an environment variable.
 
-You can use a configuration file instead of command-line arguments.
+## Precedence
 
-### YAML Format
+From lowest to highest priority:
 
-Create `config.yaml`:
+1. Built-in defaults
+2. Config file
+3. Environment variables
+4. Command-line arguments
 
-```yaml
-# AWS Configuration
-profile: my-aws-profile
-policies_path: ./policies
+A flag you do not pass never overrides a value from the file or the environment. For
+example, `upload: true` in the file stays enabled when you run `--config c.yaml`.
 
-# Policy options
-policy_type: identity          # identity, resource, scp or rcp
-# resource_type: s3-bucket     # only with policy_type: resource
-# locale: EN
-# recursive: false
-# max_findings: 100
+## Config file
 
-# Output Configuration
-format: html
-output: report.html
+=== "YAML"
 
-# Report Options
-zip: true
-upload: false
-bucket_name: my-reports-bucket   # "bucket" is accepted as an alias
+    ```yaml
+    # config.yaml
+    profile: my-aws-profile
+    policies_path: ./policies
+    policy_type: identity            # identity, resource, scp or rcp
+    format: html
+    zip: true
 
-# Failure handling
-# continue_on_error: false
-# fail_on: error               # error, security-warning, warning, suggestion, none
+    upload: true
+    bucket_name: my-reports-bucket
 
-# Custom policy checks (see "Policy Types & Custom Checks")
-# checks:
-#   no_new_access: {reference_path: ./baseline, strict: false}
-#   access_not_granted: {actions: ["iam:*"], resources: []}
-#   no_public_access: {resource_type: s3-bucket}
-# policy_sets:
-#   - {path: ./scps, policy_type: scp}
+    fail_on: warning                 # error, security-warning, warning, suggestion, none
+    log_format: json
+    ```
 
-# Execution Options
-dry_run: false
-ci: false
+=== "TOML"
 
-# Logging
-verbose: false
-quiet: false
-log_format: text
-```
+    ```toml
+    # config.toml
+    profile = "my-aws-profile"
+    policies_path = "./policies"
+    policy_type = "identity"
+    format = "html"
+    zip = true
 
-Use it:
+    upload = true
+    bucket_name = "my-reports-bucket"
 
-```bash
-validate-aws-policies --config config.yaml
-```
+    fail_on = "warning"
+    log_format = "json"
+    ```
 
-### TOML Format
+Run it with `validate-aws-policies --config config.yaml`. The file must end in `.yaml`,
+`.yml` or `.toml`. Copy `config.example.yaml` or `config.example.toml` from the repository
+for a commented starting point.
 
-Create `config.toml`:
+## Keys
 
-```toml
-# AWS Configuration
-profile = "my-aws-profile"
-policies_path = "./policies"
+| Key | Type | Default | Command-line option |
+|---|---|---|---|
+| `profile` | string | none | `--profile` |
+| `policies_path` | string | `./policies` | `--policies-path` |
+| `policy_type` | string | `identity` | `--policy-type` |
+| `resource_type` | string | none | `--resource-type` |
+| `locale` | string | `EN` | `--locale` |
+| `recursive` | bool | false | `--recursive` |
+| `max_findings` | int | all | `--max-findings` |
+| `format` | string | `json` | `--format` |
+| `output` | string | none | `--output` |
+| `zip` | bool | false | `--zip` |
+| `upload` | bool | false | `--upload` |
+| `bucket_name` | string | none | `--bucket` |
+| `dry_run` | bool | false | `--dry-run` |
+| `continue_on_error` | bool | false | `--continue-on-error` |
+| `fail_on` | string | none | `--fail-on` |
+| `verbose` / `quiet` | bool | false | `--verbose` / `--quiet` |
+| `log_format` | string | `text` | `--log-format` |
+| `log_level` | string | `INFO` | `LOG_LEVEL` variable |
+| `check_no_new_access` | bool | false | `--check-no-new-access` |
+| `reference_path` | string | none | `--reference-path` |
+| `strict_references` | bool | false | `--strict-references` |
+| `check_access_not_granted` | bool | false | `--check-access-not-granted` |
+| `deny_actions`, `deny_resources` | list | none | `--deny-actions`, `--deny-resources` |
+| `check_no_public_access` | string | none | `--check-no-public-access` |
+| `checks` | mapping | none | shortcut for the `check_*` keys |
+| `policy_sets` | list | none | config file only |
+| `ci` | bool | false | `--ci` (no effect today) |
 
-# Output Configuration
-format = "html"
-output = "report.html"
+`checks` and `policy_sets` are described in
+[Policy Types & Custom Checks](access-analyzer-features.md#policy-sets). Unknown keys are
+ignored.
 
-# Report Options
-zip = true
-upload = false
-bucket = "my-reports-bucket"
+### Older key names
 
-# Execution Options
-dry_run = false
-ci = false
+These names from earlier versions still work and mean the same as the new ones:
 
-# Logging
-verbose = false
-quiet = false
-log_format = "text"
-```
+| Older | Current |
+|---|---|
+| `directory_policies_path` | `policies_path` |
+| `upload_report` | `upload` |
+| `zip_reports` | `zip` |
+| `bucket` | `bucket_name` |
 
-Use it:
+## Environment variables
 
-```bash
-validate-aws-policies --config config.toml
-```
+| Variable | Sets | Notes |
+|---|---|---|
+| `AWS_PROFILE` | `profile` | Also read by boto3 when no profile is set |
+| `POLICIES_PATH` | `policies_path` | |
+| `REPORTS_BUCKET` | `bucket_name` | |
+| `LOG_LEVEL` | `log_level` | `DEBUG`, `INFO`, `WARNING` or `ERROR`. `--verbose` and `--quiet` take priority. |
 
-## Configuration Priority
+An environment variable overrides the config file, and a command-line option overrides both.
 
-Configuration is merged in this order (later overrides earlier):
+## Checks the tool runs on your configuration
 
-1. Configuration file
-2. Environment variables
-3. Command-line arguments
+Invalid combinations stop the run with exit code 2 and a message, before any AWS call:
 
-Key names: the config file uses the same names as the options (`policies_path`, `upload`,
-`zip`, `bucket_name`). The older names `directory_policies_path`, `upload_report`,
-`zip_reports` and `bucket` are still accepted and mean the same thing. Value options such
-as `format`, `log_format`, `policy_type` and `fail_on` in the file are used when the
-command line does not set them.
+- `--upload` without a bucket, or `--bucket` without `--upload`
+- `--dry-run` together with `--upload` (and, on the command line, `--zip`)
+- `resource_type` without `policy_type: resource`
+- custom checks with `scp` or `rcp` policies, `check_no_new_access` without `reference_path`,
+  `check_access_not_granted` without `deny_actions` or `deny_resources`
+- `verbose` and `quiet` both enabled
+- an unknown policy type, locale, `fail_on` level or resource type
 
-## Environment Variables
+## AWS configuration
 
-You can use environment variables for common settings:
-
-```bash
-export AWS_PROFILE=my-profile
-export POLICIES_PATH=./policies
-export REPORTS_BUCKET=my-bucket
-
-validate-aws-policies
-```
-
-Supported environment variables:
-
-- `AWS_PROFILE` - AWS CLI profile name
-- `POLICIES_PATH` - Path to policies directory
-- `REPORTS_BUCKET` - S3 bucket for uploads
-
-## AWS Configuration
-
-### Using AWS Profiles
-
-In `~/.aws/config`:
+Profiles live in `~/.aws/config`:
 
 ```ini
-[profile my-profile]
-region = us-east-1
-output = json
-
 [profile my-sso-profile]
 sso_start_url = https://my-sso-portal.awsapps.com/start
 sso_region = us-east-1
@@ -142,88 +138,49 @@ sso_role_name = MyRole
 region = us-east-1
 ```
 
-### Using Environment Variables
+Run `aws sso login --profile my-sso-profile` first. Without a profile the standard
+credential chain applies (environment variables, container or instance role). Set
+`AWS_REGION` if your profile has no region.
 
-```bash
-export AWS_PROFILE=my-profile
-export AWS_REGION=us-east-1
-export AWS_DEFAULT_REGION=us-east-1
+## S3 upload
+
+Reports are uploaded to:
+
+```text
+s3://<bucket>/AccessAnalyzer/<YYYY>/<MM>/<DD>/<file name>
 ```
 
-## S3 Upload Configuration
+for example `s3://my-bucket/AccessAnalyzer/2026/03/06/AccessAnalyzerReport_20260306_150000.html`.
 
-When using `--upload`, reports are uploaded to:
+## Example configurations
 
-```
-s3://<bucket>/AccessAnalyzer/<YYYY>/<MM>/<DD>/<filename>
-```
+=== "Development"
 
-Example:
+    ```yaml
+    profile: dev-profile
+    policies_path: ./policies
+    format: text
+    verbose: true
+    dry_run: true
+    ```
 
-```
-s3://my-bucket/AccessAnalyzer/2024/02/22/AccessAnalyzerReport_2024-02-22_150000.html
-```
+=== "CI/CD"
 
-## Logging Configuration
+    ```yaml
+    policies_path: ./policies
+    format: xml
+    fail_on: error
+    log_format: json
+    quiet: true
+    ```
 
-### Log Levels
+=== "Release archive"
 
-- `--quiet` - Only errors
-- Default - Info and above
-- `--verbose` - Debug and above
-
-### Log Formats
-
-#### Text (Default)
-
-```
-2024-02-22 15:00:00 INFO Starting validation...
-2024-02-22 15:00:01 INFO Validating 5 policies...
-```
-
-#### JSON
-
-```bash
-validate-aws-policies --policies-path ./policies --log-format json
-```
-
-```json
-{"timestamp": "2024-02-22T15:00:00", "level": "INFO", "message": "Starting validation..."}
-{"timestamp": "2024-02-22T15:00:01", "level": "INFO", "message": "Validating 5 policies..."}
-```
-
-## Example Configurations
-
-### Development
-
-```yaml
-profile: dev-profile
-policies_path: ./policies
-format: text
-verbose: true
-dry_run: true
-```
-
-### CI/CD
-
-```yaml
-profile: ci-profile
-policies_path: ./policies
-format: json
-ci: true
-quiet: true
-upload: true
-bucket: ci-reports-bucket
-```
-
-### Production
-
-```yaml
-profile: prod-profile
-policies_path: ./policies
-format: all
-zip: true
-upload: true
-bucket: prod-reports-bucket
-log_format: json
-```
+    ```yaml
+    profile: prod-profile
+    policies_path: ./policies
+    format: all
+    zip: true
+    upload: true
+    bucket_name: prod-reports-bucket
+    ```
