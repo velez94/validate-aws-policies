@@ -21,12 +21,12 @@ jobs:
       - run: mypy src --ignore-missing-imports
 
   test:
-    # Pinned: ubuntu-latest no longer provides Python 3.8 and 3.9
+    # Pinned: ubuntu-latest does not provide every Python version in the matrix
     runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.8", "3.9", "3.10", "3.11", "3.12", "3.13"]
+        python-version: ["3.9", "3.10", "3.11", "3.12", "3.13", "3.14"]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -34,4 +34,15 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - run: pip install -e ".[dev]"
       # Coverage threshold (80%) is enforced by pyproject.toml
+      - run: pytest
+
+  # The oldest supported Python with the oldest supported boto3 (see pyproject.toml)
+  floor:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.9"
+      - run: pip install -e ".[dev]" "boto3==1.36.0" "botocore==1.36.0"
       - run: pytest

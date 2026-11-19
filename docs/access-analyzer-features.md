@@ -213,6 +213,6 @@ reports:
 
 ## Older boto3 versions
 
-The package still installs with boto3 1.34.138 or newer. Newer API features are detected at
-run time. If your boto3 does not support one (for example custom checks or
+The package requires boto3 1.36.0 or newer. Features that depend on API values added later
+are detected at run time. If your boto3 does not support one (for example custom checks or
 `--policy-type rcp`), the tool exits with code 2 and tells you to upgrade boto3.

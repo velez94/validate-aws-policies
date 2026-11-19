@@ -5,7 +5,7 @@ Access Analyzer capabilities are detected from the service model at runtime and
 reported with a clear message when the installed SDK is too old.
 """
 
-from typing import Any, List, Optional
+from typing import Any, Optional
 
 
 class SdkFeatureError(Exception):
@@ -33,7 +33,7 @@ def ensure_operation(client: Any, operation: str) -> None:
         )
 
 
-def enum_values(client: Any, shape: str, member: str) -> Optional[List[str]]:
+def enum_values(client: Any, shape: str, member: str) -> Optional[list[str]]:
     """Return the allowed enum values of a request member, or None if unknown."""
     try:
         values = client.meta.service_model.shape_for(shape).members[member].enum
@@ -63,7 +63,7 @@ def ensure_enum_value(client: Any, shape: str, member: str, value: str, label: s
         )
 
 
-def normalize_resource_type(value: str, allowed: List[str]) -> str:
+def normalize_resource_type(value: str, allowed: list[str]) -> str:
     """Map a friendly resource type name to an API value.
 
     Accepts the API value (``AWS::S3::Bucket``) or a short form that drops the

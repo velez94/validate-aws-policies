@@ -10,7 +10,7 @@ listed under the optional ``checks`` key of the policy result.
 
 import logging
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 from ..ops.findings import is_placeholder
 from .constants import (
@@ -35,7 +35,7 @@ FAIL = "FAIL"
 SKIPPED = "SKIPPED"
 
 
-def checks_requested(config: Dict[str, Any]) -> bool:
+def checks_requested(config: dict[str, Any]) -> bool:
     """True if any custom policy check is enabled in the configuration."""
     return bool(
         config.get("check_no_new_access")
@@ -57,8 +57,8 @@ def resolve_public_access_resource_type(client: Any, value: str) -> str:
 
 
 def _failure_entry(
-    policy_name: str, code: str, message: str, reasons: List[Dict[str, Any]]
-) -> Dict[str, Any]:
+    policy_name: str, code: str, message: str, reasons: list[dict[str, Any]]
+) -> dict[str, Any]:
     return {
         "policyName": policy_name,
         "issueCode": code,
@@ -75,11 +75,11 @@ def _failure_entry(
 
 
 def _record(
-    result: Dict[str, Any],
+    result: dict[str, Any],
     name: str,
     outcome: str,
     message: str = "",
-    reasons: Optional[List[Dict[str, Any]]] = None,
+    reasons: Optional[list[dict[str, Any]]] = None,
 ) -> None:
     """Store a check outcome and, for failures, an ERROR entry in the summary."""
     reasons = reasons or []
@@ -96,7 +96,7 @@ def _record(
     summary.append(_failure_entry(policy_name, name, message, reasons))
 
 
-def _normalize_reasons(raw: Any) -> List[Dict[str, Any]]:
+def _normalize_reasons(raw: Any) -> list[dict[str, Any]]:
     return [
         {key: item[key] for key in ("description", "statementId", "statementIndex") if key in item}
         for item in (raw or [])
@@ -104,14 +104,14 @@ def _normalize_reasons(raw: Any) -> List[Dict[str, Any]]:
 
 
 def run_policy_checks(
-    results: List[Dict[str, Any]],
+    results: list[dict[str, Any]],
     policies_dir: Optional[Path],
     policy_type: str,
-    config: Dict[str, Any],
+    config: dict[str, Any],
     client: Optional[Any] = None,
     resource_type: Optional[str] = None,
-    documents: Optional[Dict[str, str]] = None,
-    reference_documents: Optional[Dict[str, str]] = None,
+    documents: Optional[dict[str, str]] = None,
+    reference_documents: Optional[dict[str, str]] = None,
     strict_resource_type: bool = False,
 ) -> None:
     """Run the enabled custom policy checks on already validated policies.
@@ -213,7 +213,7 @@ def run_policy_checks(
                 client, result, name, document, api_type, reference_dir, config, reference_documents
             )
         if run_not_granted:
-            access: Dict[str, List[str]] = {}
+            access: dict[str, list[str]] = {}
             if actions:
                 access["actions"] = actions
             if resources:
@@ -233,13 +233,13 @@ def run_policy_checks(
 
 def _check_new_access(
     client: Any,
-    result: Dict[str, Any],
+    result: dict[str, Any],
     name: str,
     document: str,
     api_type: str,
     reference_dir: Optional[Path],
-    config: Dict[str, Any],
-    reference_documents: Optional[Dict[str, str]] = None,
+    config: dict[str, Any],
+    reference_documents: Optional[dict[str, str]] = None,
 ) -> None:
     if reference_documents is not None:
         reference_text = reference_documents.get(name)
@@ -274,7 +274,7 @@ def _check_new_access(
     _record_response(result, CHECK_NO_NEW_ACCESS, response)
 
 
-def _record_response(result: Dict[str, Any], code: str, response: Dict[str, Any]) -> None:
+def _record_response(result: dict[str, Any], code: str, response: dict[str, Any]) -> None:
     outcome = FAIL if response.get("result") == FAIL else PASS
     message = response.get("message", "")
     if outcome == FAIL:

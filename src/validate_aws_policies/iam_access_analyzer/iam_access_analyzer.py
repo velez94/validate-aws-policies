@@ -1,8 +1,9 @@
 """Use boto3 and IAM access Analyzer API."""
 
 import logging
+from collections.abc import Sequence
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
+from typing import Any, Optional, Union
 
 import boto3
 from botocore.config import Config
@@ -61,7 +62,7 @@ def _check_options(
     resource_type: Optional[str],
     locale: str,
     max_findings: Optional[int],
-) -> Tuple[str, Optional[str], str]:
+) -> tuple[str, Optional[str], str]:
     """Validate and normalize the options shared by all validate functions."""
     api_policy_type = resolve_policy_type(policy_type)
     api_resource_type = resolve_resource_type(resource_type) if resource_type else None
@@ -78,7 +79,7 @@ def _check_options(
 
 def _make_paginator(
     client: Optional[Any], api_policy_type: str, api_resource_type: Optional[str]
-) -> Tuple[Any, Any]:
+) -> tuple[Any, Any]:
     """Create the client (if needed) and the validate_policy paginator."""
     try:
         if client is None:
@@ -116,17 +117,17 @@ def _validate_content(
     max_findings: Optional[int],
     fail_fast: bool,
     policy_name: Optional[str] = None,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Validate one policy document and return its report entry.
 
     ``policy_name`` is only set for documents that are not files (IaC), so the
     ``policyName`` of file results stays the file name without extension.
     """
-    request_options: Dict[str, Any] = {}
+    request_options: dict[str, Any] = {}
     if api_resource_type:
         request_options["validatePolicyResourceType"] = api_resource_type
 
-    pagination: Dict[str, Any] = {"PageSize": 20}
+    pagination: dict[str, Any] = {"PageSize": 20}
     if max_findings:
         pagination["MaxItems"] = max_findings
 
@@ -140,7 +141,7 @@ def _validate_content(
     )
 
     # Collect all findings across pages
-    findings: List[Dict[str, Any]] = []
+    findings: list[dict[str, Any]] = []
     for page in response_iterator:
         findings.extend(page.get("findings", []))
 
@@ -155,7 +156,7 @@ def _validate_content(
 
 
 def validate_policies(
-    list_policies: List[str],
+    list_policies: list[str],
     policies_path: Union[str, Path],
     policy_type: str = DEFAULT_POLICY_TYPE,
     resource_type: Optional[str] = None,
@@ -163,7 +164,7 @@ def validate_policies(
     max_findings: Optional[int] = None,
     fail_fast: bool = True,
     client: Optional[Any] = None,
-) -> List[Dict[str, Any]]:
+) -> list[dict[str, Any]]:
     """
     Validate AWS policies using IAM Access Analyzer API.
 
@@ -206,7 +207,7 @@ def validate_policies(
         >>> results = validate_policies(policies, path)
         >>> print(results[0]['summary'])
     """
-    report: List[Dict[str, Any]] = []
+    report: list[dict[str, Any]] = []
 
     api_policy_type, api_resource_type, locale = _check_options(
         policy_type, resource_type, locale, max_findings
@@ -278,14 +279,14 @@ def validate_policies(
 
 
 def validate_policy_documents(
-    documents: Sequence[Tuple[str, str]],
+    documents: Sequence[tuple[str, str]],
     policy_type: str = DEFAULT_POLICY_TYPE,
     resource_type: Optional[str] = None,
     locale: str = DEFAULT_LOCALE,
     max_findings: Optional[int] = None,
     fail_fast: bool = True,
     client: Optional[Any] = None,
-) -> List[Dict[str, Any]]:
+) -> list[dict[str, Any]]:
     """
     Validate policy documents that are already in memory (for example from IaC).
 
@@ -312,7 +313,7 @@ def validate_policy_documents(
     api_policy_type, api_resource_type, locale = _check_options(
         policy_type, resource_type, locale, max_findings
     )
-    report: List[Dict[str, Any]] = []
+    report: list[dict[str, Any]] = []
     if not documents:
         return report
 

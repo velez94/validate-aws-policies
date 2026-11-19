@@ -6,13 +6,12 @@ Access Analyzer has a resource-specific check; other resource policies are valid
 with the generic resource policy checks.
 """
 
-from typing import Tuple
 
 from .base import MapEntry
 
 M = MapEntry
 
-TERRAFORM_MAP: Tuple[MapEntry, ...] = (
+TERRAFORM_MAP: tuple[MapEntry, ...] = (
     # Identity policies
     M("aws_iam_policy", "policy", "identity"),
     M("aws_iam_role_policy", "policy", "identity"),
@@ -40,7 +39,7 @@ TERRAFORM_MAP: Tuple[MapEntry, ...] = (
     M("aws_organizations_policy", "content", "scp", type_path="type"),
 )
 
-CLOUDFORMATION_MAP: Tuple[MapEntry, ...] = (
+CLOUDFORMATION_MAP: tuple[MapEntry, ...] = (
     M("AWS::IAM::Policy", "Properties.PolicyDocument", "identity"),
     M("AWS::IAM::ManagedPolicy", "Properties.PolicyDocument", "identity"),
     M("AWS::IAM::Role", "Properties.Policies[*].PolicyDocument", "identity", label="Policies"),
@@ -82,7 +81,7 @@ CLOUDFORMATION_MAP: Tuple[MapEntry, ...] = (
     M("AWS::Organizations::Policy", "Properties.Content", "scp", type_path="Properties.Type"),
 )
 
-PULUMI_MAP: Tuple[MapEntry, ...] = (
+PULUMI_MAP: tuple[MapEntry, ...] = (
     M("aws:iam/policy:Policy", "policy", "identity"),
     M("aws:iam/rolePolicy:RolePolicy", "policy", "identity"),
     M("aws:iam/userPolicy:UserPolicy", "policy", "identity"),

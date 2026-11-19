@@ -10,7 +10,7 @@ This module provides configuration loading from multiple sources with precedence
 import logging
 import os
 from pathlib import Path
-from typing import Any, Dict, Optional, Union
+from typing import Any, Optional, Union
 
 logger = logging.getLogger(__name__)
 
@@ -62,9 +62,9 @@ class ConfigLoader:
             config_file: Optional path to configuration file (YAML or TOML)
         """
         self.config_file = Path(config_file) if config_file else None
-        self._config: Dict[str, Any] = {}
+        self._config: dict[str, Any] = {}
 
-    def load_config(self) -> Dict[str, Any]:
+    def load_config(self) -> dict[str, Any]:
         """Load configuration from all sources with proper precedence.
 
         Precedence order (lowest to highest):
@@ -94,7 +94,7 @@ class ConfigLoader:
         return self._config
 
     @classmethod
-    def _sync_aliases(cls, layer: Dict[str, Any]) -> Dict[str, Any]:
+    def _sync_aliases(cls, layer: dict[str, Any]) -> dict[str, Any]:
         """Make legacy and canonical keys of one config layer agree.
 
         If a layer sets only one spelling, the other spelling is filled in with
@@ -116,7 +116,7 @@ class ConfigLoader:
                 synced[legacy] = synced[canonical]
         return synced
 
-    def _load_defaults(self) -> Dict[str, Any]:
+    def _load_defaults(self) -> dict[str, Any]:
         """Load default configuration values.
 
         Returns:
@@ -132,7 +132,7 @@ class ConfigLoader:
             "log_level": "INFO",
         }
 
-    def _load_file(self) -> Dict[str, Any]:
+    def _load_file(self) -> dict[str, Any]:
         """Load configuration from YAML or TOML file.
 
         Returns:
@@ -159,7 +159,7 @@ class ConfigLoader:
         except Exception as e:
             raise ConfigError(f"Failed to load config file {self.config_file}: {e}") from e
 
-    def _load_yaml(self) -> Dict[str, Any]:
+    def _load_yaml(self) -> dict[str, Any]:
         """Load configuration from YAML file.
 
         Returns:
@@ -185,7 +185,7 @@ class ConfigLoader:
         except yaml.YAMLError as e:
             raise ConfigError(f"Invalid YAML in config file: {e}") from e
 
-    def _load_toml(self) -> Dict[str, Any]:
+    def _load_toml(self) -> dict[str, Any]:
         """Load configuration from TOML file.
 
         Returns:
@@ -216,7 +216,7 @@ class ConfigLoader:
         except Exception as e:
             raise ConfigError(f"Invalid TOML in config file: {e}") from e
 
-    def _load_env_vars(self) -> Dict[str, Any]:
+    def _load_env_vars(self) -> dict[str, Any]:
         """Load configuration from environment variables.
 
         Supported environment variables:

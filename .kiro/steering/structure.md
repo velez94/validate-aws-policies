@@ -41,7 +41,7 @@ docs/                             # mkdocs site: index, installation, usage, con
 examples/policies/                # sample policy JSON
 config.example.{yaml,toml}        # sample config files
 .github/workflows/publish.yml     # release pipeline
-.github/workflows/test.yml        # ruff, mypy and pytest on Python 3.8-3.13
+.github/workflows/test.yml        # ruff, mypy, pytest on Python 3.9-3.14 and a floor job (3.9 + boto3 1.36.0)
 .github/workflows/docs.yml        # mkdocs build --strict, deploy to GitHub Pages from main
 .kiro/specs/cli-developer-improvements/   # requirements, design, tasks for the 3.x CLI modernization
 .kiro/specs/access-analyzer-modernization/ # plan for adopting new Access Analyzer APIs

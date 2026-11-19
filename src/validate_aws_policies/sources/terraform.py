@@ -2,7 +2,7 @@
 
 import logging
 import re
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import Any, Optional
 
 from .base import (
     ORGANIZATION_POLICY_TYPES,
@@ -32,15 +32,15 @@ def is_terraform(data: Any) -> bool:
     )
 
 
-def _module_names(module_address: Optional[str]) -> Tuple[str, ...]:
+def _module_names(module_address: Optional[str]) -> tuple[str, ...]:
     return tuple(re.findall(r"module\.([^.\[\]]+)", module_address or ""))
 
 
-def _configured_attributes(data: Dict[str, Any]) -> Dict[Tuple[Tuple[str, ...], str], Set[str]]:
+def _configured_attributes(data: dict[str, Any]) -> dict[tuple[tuple[str, ...], str], set[str]]:
     """Map (module path, ``type.name``) to the attributes the configuration sets."""
-    configured: Dict[Tuple[Tuple[str, ...], str], Set[str]] = {}
+    configured: dict[tuple[tuple[str, ...], str], set[str]] = {}
 
-    def visit(module: Dict[str, Any], path: Tuple[str, ...]) -> None:
+    def visit(module: dict[str, Any], path: tuple[str, ...]) -> None:
         for resource in module.get("resources", []) or []:
             key = (path, f"{resource.get('type')}.{resource.get('name')}")
             expressions = resource.get("expressions") or {}
@@ -54,13 +54,13 @@ def _configured_attributes(data: Dict[str, Any]) -> Dict[Tuple[Tuple[str, ...], 
     return configured
 
 
-def _entries_for(resource_type: str) -> List[MapEntry]:
+def _entries_for(resource_type: str) -> list[MapEntry]:
     return [entry for entry in TERRAFORM_MAP if entry.iac_type == resource_type]
 
 
-def _planned_resources(data: Dict[str, Any], options: ExtractOptions) -> List[Dict[str, Any]]:
+def _planned_resources(data: dict[str, Any], options: ExtractOptions) -> list[dict[str, Any]]:
     """Normalize a plan or a state into ``address/type/module/after/unknown`` records."""
-    records: List[Dict[str, Any]] = []
+    records: list[dict[str, Any]] = []
 
     if "resource_changes" in data:
         for change in data.get("resource_changes") or []:
@@ -84,7 +84,7 @@ def _planned_resources(data: Dict[str, Any], options: ExtractOptions) -> List[Di
             )
         return records
 
-    def visit(module: Dict[str, Any]) -> None:
+    def visit(module: dict[str, Any]) -> None:
         for resource in module.get("resources", []) or []:
             if resource.get("mode") != "managed":
                 continue
@@ -110,7 +110,7 @@ def _planned_resources(data: Dict[str, Any], options: ExtractOptions) -> List[Di
     return records
 
 
-def _policy_type(entry: MapEntry, after: Dict[str, Any]) -> Optional[str]:
+def _policy_type(entry: MapEntry, after: dict[str, Any]) -> Optional[str]:
     if not entry.type_path:
         return entry.policy_type
     declared = after.get(entry.type_path) or "SERVICE_CONTROL_POLICY"
@@ -118,7 +118,7 @@ def _policy_type(entry: MapEntry, after: Dict[str, Any]) -> Optional[str]:
 
 
 def extract_terraform(
-    data: Dict[str, Any], file: str, options: Optional[ExtractOptions] = None
+    data: dict[str, Any], file: str, options: Optional[ExtractOptions] = None
 ) -> ExtractionResult:
     """Extract policy documents from parsed ``terraform show -json`` output.
 

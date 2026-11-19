@@ -1,8 +1,9 @@
 """Shared model and helpers for the IaC policy extractors."""
 
 import json
+from collections.abc import Iterator
 from dataclasses import dataclass, field
-from typing import Any, Dict, Iterator, List, Optional, Tuple
+from typing import Any, Optional
 
 TERRAFORM = "terraform-plan"
 CLOUDFORMATION = "cloudformation"
@@ -60,8 +61,8 @@ class SkippedPolicy:
 
 @dataclass
 class ExtractionResult:
-    documents: List[PolicyDocument] = field(default_factory=list)
-    skipped: List[SkippedPolicy] = field(default_factory=list)
+    documents: list[PolicyDocument] = field(default_factory=list)
+    skipped: list[SkippedPolicy] = field(default_factory=list)
 
     def extend(self, other: "ExtractionResult") -> None:
         self.documents.extend(other.documents)
@@ -71,7 +72,7 @@ class ExtractionResult:
 @dataclass
 class ExtractOptions:
     only_changed: bool = False
-    params: Dict[str, str] = field(default_factory=dict)
+    params: dict[str, str] = field(default_factory=dict)
     region: str = "us-east-1"
 
 
@@ -100,10 +101,10 @@ def policy_text(value: Any) -> Optional[str]:
 def walk_path(
     value: Any,
     unknown: Any,
-    parts: List[str],
-    indices: Tuple[int, ...] = (),
+    parts: list[str],
+    indices: tuple[int, ...] = (),
     list_key: Optional[str] = None,
-) -> Iterator[Tuple[Tuple[int, ...], Optional[str], Any, bool]]:
+) -> Iterator[tuple[tuple[int, ...], Optional[str], Any, bool]]:
     """Resolve a dotted path with ``[*]`` fan-out in a value and its unknown mask.
 
     ``unknown`` mirrors ``value`` as in Terraform's ``after_unknown`` (``True`` for an
@@ -149,7 +150,7 @@ def walk_path(
 
 
 def document_id(
-    base: str, entry: MapEntry, indices: Tuple[int, ...], list_key: Optional[str]
+    base: str, entry: MapEntry, indices: tuple[int, ...], list_key: Optional[str]
 ) -> str:
     """Build a policy id from a resource address and the map entry."""
     label = entry.label

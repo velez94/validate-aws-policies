@@ -5,7 +5,7 @@ Values that come from a config file are checked here, after merging.
 """
 
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any
 
 from ..iam_access_analyzer.constants import (
     CHECKABLE_POLICY_TYPES,
@@ -18,7 +18,7 @@ from ..iam_access_analyzer.constants import (
 INPUT_SOURCES = ("auto", "terraform-plan", "cloudformation", "pulumi")
 
 
-def apply_checks_section(config: Dict[str, Any]) -> None:
+def apply_checks_section(config: dict[str, Any]) -> None:
     """Flatten the optional ``checks`` mapping of a config file.
 
     Example::
@@ -59,7 +59,7 @@ def apply_checks_section(config: Dict[str, Any]) -> None:
         config.setdefault("check_no_public_access", public)
 
 
-def _as_list(value: Any) -> List[str]:
+def _as_list(value: Any) -> list[str]:
     if value is None:
         return []
     if isinstance(value, str):
@@ -71,9 +71,9 @@ def _resource_type_known(value: str) -> bool:
     return value.lower() in RESOURCE_TYPES or value in RESOURCE_TYPES.values()
 
 
-def validate_merged_config(config: Dict[str, Any]) -> List[str]:
+def validate_merged_config(config: dict[str, Any]) -> list[str]:
     """Return a list of configuration errors (empty when the config is usable)."""
-    errors: List[str] = []
+    errors: list[str] = []
 
     policy_type = str(config.get("policy_type") or "identity").lower()
     if policy_type not in POLICY_TYPES:

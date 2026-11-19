@@ -8,7 +8,8 @@ validates. A value that cannot be resolved is reported as skipped, never guessed
 import json
 import logging
 import re
-from typing import Any, Dict, Iterator, List, Optional, Tuple
+from collections.abc import Iterator
+from typing import Any, Optional
 
 import yaml
 
@@ -57,7 +58,7 @@ CloudFormationLoader.yaml_implicit_resolvers = {
 }
 
 
-def _tag_constructor(loader: yaml.Loader, suffix: str, node: yaml.Node) -> Dict[str, Any]:
+def _tag_constructor(loader: yaml.Loader, suffix: str, node: yaml.Node) -> dict[str, Any]:
     if isinstance(node, yaml.ScalarNode):
         value: Any = loader.construct_scalar(node)
     elif isinstance(node, yaml.SequenceNode):
@@ -108,7 +109,7 @@ _ARN_SERVICE = {"AWS::ElasticLoadBalancingV2": "elasticloadbalancing", "AWS::Log
 class Resolver:
     """Resolve intrinsic functions of one template."""
 
-    def __init__(self, template: Dict[str, Any], options: ExtractOptions):
+    def __init__(self, template: dict[str, Any], options: ExtractOptions):
         self.template = template
         self.region = options.region
         self.overrides = options.params
@@ -116,7 +117,7 @@ class Resolver:
         self.mappings = template.get("Mappings") or {}
         self.conditions = template.get("Conditions") or {}
         self.resources = template.get("Resources") or {}
-        self._condition_cache: Dict[str, bool] = {}
+        self._condition_cache: dict[str, bool] = {}
 
     # --- placeholders -----------------------------------------------------
 
@@ -299,7 +300,7 @@ class Resolver:
         return str(value)
 
     def _sub(self, args: Any) -> str:
-        local: Dict[str, Any] = {}
+        local: dict[str, Any] = {}
         if isinstance(args, list):
             template = args[0]
             if len(args) > 1 and isinstance(args[1], dict):
@@ -331,10 +332,10 @@ class Resolver:
 def _navigate(
     resolver: Resolver,
     raw: Any,
-    parts: List[str],
-    indices: Tuple[int, ...] = (),
+    parts: list[str],
+    indices: tuple[int, ...] = (),
     list_key: Optional[str] = None,
-) -> Iterator[Tuple[Tuple[int, ...], Optional[str], Any, Optional[str]]]:
+) -> Iterator[tuple[tuple[int, ...], Optional[str], Any, Optional[str]]]:
     """Walk a path in the raw template, resolving as late as possible.
 
     Yields ``(indices, list_key, value, error)``. ``error`` is set when part of the
@@ -370,7 +371,7 @@ def _navigate(
 
 
 def extract_cloudformation(
-    template: Dict[str, Any], file: str, options: Optional[ExtractOptions] = None
+    template: dict[str, Any], file: str, options: Optional[ExtractOptions] = None
 ) -> ExtractionResult:
     """Extract policy documents from a parsed CloudFormation template."""
     options = options or ExtractOptions()
@@ -387,7 +388,7 @@ def extract_cloudformation(
         if not isinstance(resource, dict):
             continue
         resource_type = str(resource.get("Type", ""))
-        entries: List[MapEntry] = [e for e in CLOUDFORMATION_MAP if e.iac_type == resource_type]
+        entries: list[MapEntry] = [e for e in CLOUDFORMATION_MAP if e.iac_type == resource_type]
         if not entries:
             continue
 

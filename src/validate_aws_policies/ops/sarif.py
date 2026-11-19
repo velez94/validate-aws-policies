@@ -2,7 +2,7 @@
 
 import os
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 from ..version import __version__
 from .findings import finding_link, finding_message, finding_spans, real_findings
@@ -35,15 +35,15 @@ def artifact_uri(file_policy: str, base_dir: Optional[str]) -> str:
     return path.as_posix()
 
 
-def build_sarif(results: List[Dict[str, Any]], base_dir: Optional[str] = None) -> Dict[str, Any]:
+def build_sarif(results: list[dict[str, Any]], base_dir: Optional[str] = None) -> dict[str, Any]:
     """Convert validation results into a SARIF log.
 
     Access Analyzer positions use 1-based lines and 0-based columns; SARIF uses
     1-based lines and columns, so columns are shifted by one.
     """
-    rules: Dict[str, Dict[str, Any]] = {}
-    sarif_results: List[Dict[str, Any]] = []
-    artifacts: List[Dict[str, Any]] = []
+    rules: dict[str, dict[str, Any]] = {}
+    sarif_results: list[dict[str, Any]] = []
+    artifacts: list[dict[str, Any]] = []
 
     seen_artifacts = set()
 
@@ -75,7 +75,7 @@ def build_sarif(results: List[Dict[str, Any]], base_dir: Optional[str] = None) -
             if link and "helpUri" not in rule:
                 rule["helpUri"] = link
 
-            physical: Dict[str, Any] = {"artifactLocation": {"uri": uri}}
+            physical: dict[str, Any] = {"artifactLocation": {"uri": uri}}
             # Spans point into the embedded policy JSON, not into the IaC file
             spans = [] if source else finding_spans(finding)
             if spans:
@@ -87,7 +87,7 @@ def build_sarif(results: List[Dict[str, Any]], base_dir: Optional[str] = None) -
                     "endColumn": end_col + 1,
                 }
 
-            location: Dict[str, Any] = {"physicalLocation": physical}
+            location: dict[str, Any] = {"physicalLocation": physical}
             message = finding_message(finding)
             if source:
                 resource_id = str(result.get("filePolicy", ""))

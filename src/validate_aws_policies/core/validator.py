@@ -5,7 +5,7 @@ import logging
 import os
 import shutil
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Optional
 
 from botocore.exceptions import BotoCoreError, ClientError
 
@@ -35,7 +35,7 @@ class UploadError(Exception):
 class PolicyValidator:
     """Orchestrate policy validation workflow."""
 
-    def __init__(self, config: Dict[str, Any]):
+    def __init__(self, config: dict[str, Any]):
         """
         Initialize PolicyValidator with configuration.
 
@@ -58,9 +58,9 @@ class PolicyValidator:
         self.config = config
         self.report_generator = ReportGenerator()
         self._base_dir: Optional[str] = None
-        self._targets_info: List[Dict[str, Any]] = []
-        self._skipped: List[SkippedPolicy] = []
-        self._iac_inputs: List[Dict[str, Any]] = []
+        self._targets_info: list[dict[str, Any]] = []
+        self._skipped: list[SkippedPolicy] = []
+        self._iac_inputs: list[dict[str, Any]] = []
 
     def run(self) -> int:
         """
@@ -89,7 +89,7 @@ class PolicyValidator:
                 return self._run_iac()
 
             targets = self._targets()
-            results: List[Dict[str, Any]] = []
+            results: list[dict[str, Any]] = []
 
             for target in targets:
                 policies_path = Path(target["path"])
@@ -159,7 +159,7 @@ class PolicyValidator:
             logger.exception(f"Unexpected error during validation: {e}")
             return EXIT_VALIDATION_ERROR
 
-    def _finish(self, results: List[Dict[str, Any]]) -> int:
+    def _finish(self, results: list[dict[str, Any]]) -> int:
         """Write the output and reports, upload them, and decide the exit code."""
         # Output results
         self._output_results(results)
@@ -211,13 +211,13 @@ class PolicyValidator:
         extraction = extract(self.config["input"], source, options, recursive=recursive)
         self._skipped = extraction.skipped
 
-        references: Optional[Dict[str, str]] = None
+        references: Optional[dict[str, str]] = None
         if self.config.get("reference_input"):
             baseline = extract(self.config["reference_input"], source, options, recursive=recursive)
             references = {doc.id: doc.text for doc in baseline.documents}
 
-        counts: Dict[str, int] = {}
-        kinds: Dict[str, str] = {}
+        counts: dict[str, int] = {}
+        kinds: dict[str, str] = {}
         for doc in extraction.documents:
             counts[doc.file] = counts.get(doc.file, 0) + 1
             kinds[doc.file] = doc.source_type
@@ -229,11 +229,11 @@ class PolicyValidator:
             logger.warning("No policies found in the input")
             return EXIT_VALIDATION_ERROR if self._unknown_values_fail() else EXIT_SUCCESS
 
-        groups: Dict[Tuple[str, Optional[str]], List[PolicyDocument]] = {}
+        groups: dict[tuple[str, Optional[str]], list[PolicyDocument]] = {}
         for doc in extraction.documents:
             groups.setdefault((doc.policy_type, doc.resource_type), []).append(doc)
 
-        results: List[Dict[str, Any]] = []
+        results: list[dict[str, Any]] = []
         for (policy_type, resource_type), docs in groups.items():
             kind = f"{policy_type}/{resource_type}" if resource_type else policy_type
             logger.info(f"Validating {len(docs)} {kind} policies...")
@@ -275,7 +275,7 @@ class PolicyValidator:
         """True when ERROR findings must not abort the run (opt-in, legacy default is abort)."""
         return bool(self.config.get("continue_on_error")) or self.config.get("fail_on") is not None
 
-    def _targets(self) -> List[Dict[str, Any]]:
+    def _targets(self) -> list[dict[str, Any]]:
         """Return the policy sets to validate.
 
         Uses ``policy_sets`` from the configuration when present, otherwise a single
@@ -303,7 +303,7 @@ class PolicyValidator:
             )
         return targets
 
-    def _get_policy_files(self, path: Path, recursive: bool = False) -> List[str]:
+    def _get_policy_files(self, path: Path, recursive: bool = False) -> list[str]:
         """
         Get list of JSON policy files from directory.
 
@@ -327,7 +327,7 @@ class PolicyValidator:
         logger.debug(f"Found {len(policy_files)} policy files: {policy_files}")
         return policy_files
 
-    def _output_results(self, results: List[Dict[str, Any]]) -> None:
+    def _output_results(self, results: list[dict[str, Any]]) -> None:
         """
         Output validation results based on configured format.
 
@@ -358,7 +358,7 @@ class PolicyValidator:
                 print(output)
         # For html/md formats, output is handled by _generate_reports
 
-    def _format_text_output(self, results: List[Dict[str, Any]]) -> str:
+    def _format_text_output(self, results: list[dict[str, Any]]) -> str:
         """
         Format validation results as human-readable text.
 
@@ -402,7 +402,7 @@ class PolicyValidator:
 
         return "\n".join(lines)
 
-    def _generate_reports(self, results: List[Dict[str, Any]]) -> List[Path]:
+    def _generate_reports(self, results: list[dict[str, Any]]) -> list[Path]:
         """
         Generate report files based on configuration.
 
@@ -414,7 +414,7 @@ class PolicyValidator:
         Returns:
             List of generated report file paths
         """
-        report_files: List[Path] = []
+        report_files: list[Path] = []
         format_type = self.config.get("format", "json")
         metadata = self._report_metadata()
 
@@ -460,7 +460,7 @@ class PolicyValidator:
 
         return report_files
 
-    def _report_metadata(self) -> Dict[str, Any]:
+    def _report_metadata(self) -> dict[str, Any]:
         """Describe the run for report headers (policy sets, checks, tool version)."""
         checks = []
         if self.config.get("check_no_new_access"):
@@ -481,7 +481,7 @@ class PolicyValidator:
             "checks": checks,
         }
 
-    def _upload_reports(self, files: List[Path]) -> None:
+    def _upload_reports(self, files: list[Path]) -> None:
         """
         Upload report files to S3.
 

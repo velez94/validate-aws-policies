@@ -2,7 +2,7 @@
 
 import json
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any
 
 import pytest
 
@@ -26,7 +26,7 @@ def config_files_dir(fixtures_dir: Path) -> Path:
 
 
 @pytest.fixture
-def valid_identity_policy() -> Dict[str, Any]:
+def valid_identity_policy() -> dict[str, Any]:
     """Return a valid identity-based policy."""
     return {
         "Version": "2012-10-17",
@@ -41,7 +41,7 @@ def valid_identity_policy() -> Dict[str, Any]:
 
 
 @pytest.fixture
-def valid_resource_policy() -> Dict[str, Any]:
+def valid_resource_policy() -> dict[str, Any]:
     """Return a valid resource-based policy."""
     return {
         "Version": "2012-10-17",
@@ -57,13 +57,13 @@ def valid_resource_policy() -> Dict[str, Any]:
 
 
 @pytest.fixture
-def invalid_policy_missing_version() -> Dict[str, Any]:
+def invalid_policy_missing_version() -> dict[str, Any]:
     """Return an invalid policy missing Version field."""
     return {"Statement": [{"Effect": "Allow", "Action": "s3:GetObject", "Resource": "*"}]}
 
 
 @pytest.fixture
-def invalid_policy_wildcard_resource() -> Dict[str, Any]:
+def invalid_policy_wildcard_resource() -> dict[str, Any]:
     """Return a policy with overly permissive wildcard resource."""
     return {
         "Version": "2012-10-17",
@@ -72,7 +72,7 @@ def invalid_policy_wildcard_resource() -> Dict[str, Any]:
 
 
 @pytest.fixture
-def sample_config_yaml() -> Dict[str, Any]:
+def sample_config_yaml() -> dict[str, Any]:
     """Return sample YAML configuration."""
     return {
         "profile": "test-profile",
@@ -85,7 +85,7 @@ def sample_config_yaml() -> Dict[str, Any]:
 
 
 @pytest.fixture
-def sample_config_toml() -> Dict[str, Any]:
+def sample_config_toml() -> dict[str, Any]:
     """Return sample TOML configuration."""
     return {
         "profile": "test-profile",
@@ -96,7 +96,7 @@ def sample_config_toml() -> Dict[str, Any]:
 
 
 @pytest.fixture
-def temp_policy_file(tmp_path: Path, valid_identity_policy: Dict[str, Any]) -> Path:
+def temp_policy_file(tmp_path: Path, valid_identity_policy: dict[str, Any]) -> Path:
     """Create a temporary policy file and return its path."""
     policy_file = tmp_path / "test-policy.json"
     policy_file.write_text(json.dumps(valid_identity_policy, indent=2))
@@ -105,7 +105,7 @@ def temp_policy_file(tmp_path: Path, valid_identity_policy: Dict[str, Any]) -> P
 
 @pytest.fixture
 def temp_policies_dir(
-    tmp_path: Path, valid_identity_policy: Dict[str, Any], valid_resource_policy: Dict[str, Any]
+    tmp_path: Path, valid_identity_policy: dict[str, Any], valid_resource_policy: dict[str, Any]
 ) -> Path:
     """Create a temporary directory with multiple policy files."""
     policies_dir = tmp_path / "policies"

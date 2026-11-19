@@ -10,7 +10,7 @@ This module provides argument parsing with:
 
 import argparse
 from pathlib import Path
-from typing import List, Optional, Tuple
+from typing import Optional
 
 from ..iam_access_analyzer.constants import FAIL_ON_LEVELS, LOCALES, RESOURCE_TYPES
 
@@ -22,12 +22,12 @@ except ImportError:
     ARGCOMPLETE_AVAILABLE = False
 
 
-def _csv(value: str) -> List[str]:
+def _csv(value: str) -> list[str]:
     """Split a comma separated argument into a list of non-empty items."""
     return [item.strip() for item in value.split(",") if item.strip()]
 
 
-def _key_value(value: str) -> Tuple[str, str]:
+def _key_value(value: str) -> tuple[str, str]:
     """Parse ``KEY=VALUE`` for ``--param``."""
     if "=" not in value or value.startswith("="):
         raise argparse.ArgumentTypeError(f"expected KEY=VALUE, got '{value}'")

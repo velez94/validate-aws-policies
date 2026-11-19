@@ -4,7 +4,7 @@ import json
 import logging
 import time
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 import boto3
 from botocore.config import Config
@@ -48,10 +48,10 @@ def read_policies(file_path: Path) -> Optional[str]:
 
 def validate_findings(
     policy: str,
-    findings: List[Dict[str, Any]],
+    findings: list[dict[str, Any]],
     fail_fast: bool = True,
     policy_name: Optional[str] = None,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Validate findings for a policy and return a summary of the findings.
 
@@ -71,7 +71,7 @@ def validate_findings(
         ValueError: If ERROR-level finding is detected and ``fail_fast`` is True
     """
     policy_name = policy_name or Path(policy).stem
-    summary: Dict[str, Any] = {"filePolicy": policy, "summary": []}
+    summary: dict[str, Any] = {"filePolicy": policy, "summary": []}
 
     if len(findings) == 0:
         logger.info(f"✅ No findings for {policy}")
@@ -157,7 +157,7 @@ def upload_file(file_name: Path, bucket: str, key: str = "reports", max_retries:
     return False
 
 
-def create_zip(file_paths: List[Path]) -> Path:
+def create_zip(file_paths: list[Path]) -> Path:
     """
     Create a zip file of the reports.
 

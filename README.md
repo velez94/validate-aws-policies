@@ -23,11 +23,11 @@ Markdown, JUnit XML or SARIF.
 - **Reports:** JSON, text, a self-contained HTML report, Markdown, JUnit XML (CodeBuild, Azure Pipelines, Jenkins, GitLab) and SARIF (GitHub code scanning).
 - **Built for pipelines:** specific exit codes, `--fail-on` severity thresholds, `--dry-run`, JSON logs, S3 upload and ZIP archives.
 - **Configuration:** command line, YAML or TOML file, and environment variables, with a documented precedence.
-- **Compatible:** upgrading inside 3.x never removes a flag, config key or exit code. Newer API features are used only when your installed boto3 supports them.
+- **Compatible:** upgrading within a major version never removes a flag, config key or exit code. Newer API features are used only when your installed boto3 supports them.
 
 ## Install
 
-Requires Python 3.8 or newer.
+Requires Python 3.9 or newer.
 
 ```bash
 pip install --upgrade validate-aws-policies

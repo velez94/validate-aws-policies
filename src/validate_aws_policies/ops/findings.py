@@ -8,14 +8,14 @@ A report entry looks like::
      "checks": [...]}          # only when custom policy checks ran
 """
 
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Optional
 
 from ..iam_access_analyzer.constants import FAIL_ON_LEVELS, SEVERITY_ORDER
 
 NO_FINDING = "None"
 
 
-def finding_message(finding: Dict[str, Any]) -> str:
+def finding_message(finding: dict[str, Any]) -> str:
     """Return the human readable message of a summary entry."""
     details = finding.get("details")
     if isinstance(details, dict):
@@ -28,7 +28,7 @@ def finding_message(finding: Dict[str, Any]) -> str:
     return str(legacy) if legacy else "No details available"
 
 
-def finding_link(finding: Dict[str, Any]) -> Optional[str]:
+def finding_link(finding: dict[str, Any]) -> Optional[str]:
     """Return the learn-more link of a summary entry, if any."""
     details = finding.get("details")
     if isinstance(details, dict):
@@ -37,13 +37,13 @@ def finding_link(finding: Dict[str, Any]) -> Optional[str]:
     return None
 
 
-def finding_spans(finding: Dict[str, Any]) -> List[Tuple[int, int, int, int]]:
+def finding_spans(finding: dict[str, Any]) -> list[tuple[int, int, int, int]]:
     """Return ``(start_line, start_col, end_line, end_col)`` for each location.
 
     Access Analyzer lines start at 1 and columns start at 0.
     """
     details = finding.get("details")
-    spans: List[Tuple[int, int, int, int]] = []
+    spans: list[tuple[int, int, int, int]] = []
     if not isinstance(details, dict):
         return spans
     for location in details.get("locations") or []:
@@ -58,17 +58,17 @@ def finding_spans(finding: Dict[str, Any]) -> List[Tuple[int, int, int, int]]:
     return spans
 
 
-def is_placeholder(finding: Dict[str, Any]) -> bool:
+def is_placeholder(finding: dict[str, Any]) -> bool:
     """True for the "No findings" placeholder entry."""
     return finding.get("findingType") == NO_FINDING
 
 
-def real_findings(result: Dict[str, Any]) -> List[Dict[str, Any]]:
+def real_findings(result: dict[str, Any]) -> list[dict[str, Any]]:
     """Summary entries of a result without the "No findings" placeholder."""
     return [f for f in result.get("summary", []) if not is_placeholder(f)]
 
 
-def count_by_type(results: List[Dict[str, Any]]) -> Dict[str, int]:
+def count_by_type(results: list[dict[str, Any]]) -> dict[str, int]:
     """Count real findings per finding type across all results."""
     counts = dict.fromkeys(SEVERITY_ORDER, 0)
     for result in results:
@@ -79,7 +79,7 @@ def count_by_type(results: List[Dict[str, Any]]) -> Dict[str, int]:
     return counts
 
 
-def exceeds_threshold(results: List[Dict[str, Any]], fail_on: str) -> bool:
+def exceeds_threshold(results: list[dict[str, Any]], fail_on: str) -> bool:
     """True when any finding is at or above the ``--fail-on`` level.
 
     Args:

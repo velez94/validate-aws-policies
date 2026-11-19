@@ -12,9 +12,10 @@ and the policies that could not be validated because their value is not known ye
 
 import json
 import logging
+from collections.abc import Sequence
 from dataclasses import replace
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
+from typing import Any, Optional, Union
 
 from .base import (
     CLOUDFORMATION,
@@ -78,9 +79,9 @@ def _matches(kind: str, data: Any) -> bool:
 
 def _expand(
     inputs: Sequence[Union[str, Path]], recursive: bool
-) -> List[Tuple[Path, bool]]:
+) -> list[tuple[Path, bool]]:
     """Expand inputs into ``(file, found_in_directory)`` pairs."""
-    files: List[Tuple[Path, bool]] = []
+    files: list[tuple[Path, bool]] = []
     for item in inputs:
         path = Path(item)
         if path.is_dir():
@@ -145,10 +146,10 @@ def extract(
     if not files:
         raise SourceError("No input given")
 
-    parts: List[Tuple[Path, ExtractionResult]] = []
+    parts: list[tuple[Path, ExtractionResult]] = []
     for path, from_directory in files:
         try:
-            data: Dict[str, Any] = _parse(path)
+            data: dict[str, Any] = _parse(path)
             kind = source or detect_source(data)
             if from_directory and not _matches(kind, data):
                 raise SourceError(f"{path} is not a {kind} input")

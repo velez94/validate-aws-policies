@@ -107,6 +107,6 @@ All requirements are additive. Existing flags, config keys, exit codes, defaults
 
 1. THE Extractor SHALL read only the mapped policy attributes. THE CLI SHALL NOT log or write other plan values, such as sensitive attributes, at any log level.
 2. THE package SHALL add no required dependency. YAML parsing SHALL use PyYAML, which is already a dependency.
-3. THE code SHALL keep Python 3.8 syntax and the boto3 floor.
+3. THE code SHALL keep Python 3.9 syntax and the boto3 floor (3.8 and boto3 below 1.36.0 were dropped in 4.0).
 4. WHEN `--input` is used with `--policies-path`, THE CLI SHALL exit with code 2.
 5. Resource maps SHALL be data tables with tests built from real tool output where a tool is available (Terraform, OpenTofu).

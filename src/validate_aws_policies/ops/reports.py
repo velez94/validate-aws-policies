@@ -4,7 +4,7 @@ import json
 import logging
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 from zipfile import ZipFile
 
 from .findings import finding_message, real_findings
@@ -18,7 +18,7 @@ class ReportGenerator:
     """Generate validation reports in various formats."""
 
     def create_html_report(
-        self, results: List[Dict[str, Any]], metadata: Optional[Dict[str, Any]] = None
+        self, results: list[dict[str, Any]], metadata: Optional[dict[str, Any]] = None
     ) -> Path:
         """
         Create a self-contained HTML report (light/dark theme, filters, search).
@@ -52,7 +52,7 @@ class ReportGenerator:
             raise
 
     def create_sarif_report(
-        self, results: List[Dict[str, Any]], base_dir: Optional[str] = None
+        self, results: list[dict[str, Any]], base_dir: Optional[str] = None
     ) -> Path:
         """
         Create a SARIF 2.1.0 report for code scanning tools.
@@ -81,7 +81,7 @@ class ReportGenerator:
             logger.error(f"Failed to create SARIF report: {e}")
             raise
 
-    def create_markdown_report(self, results: List[Dict[str, Any]]) -> Path:
+    def create_markdown_report(self, results: list[dict[str, Any]]) -> Path:
         """
         Create Markdown report from validation results.
 
@@ -204,7 +204,7 @@ Generated: {timestamp.strftime('%Y-%m-%d %H:%M:%S')}
             logger.error(f"Failed to create Markdown report: {e}")
             raise
 
-    def create_zip(self, file_paths: List[Path]) -> Path:
+    def create_zip(self, file_paths: list[Path]) -> Path:
         """
         Create ZIP archive of report files.
 
@@ -241,7 +241,7 @@ Generated: {timestamp.strftime('%Y-%m-%d %H:%M:%S')}
         except Exception as e:
             logger.error(f"Failed to create ZIP archive: {e}")
             raise OSError(f"Failed to create ZIP archive: {e}") from e
-    def create_junit_xml_report(self, results: List[Dict[str, Any]]) -> Path:
+    def create_junit_xml_report(self, results: list[dict[str, Any]]) -> Path:
         """
         Create JUnit XML report from validation results for CI/CD integration.
 

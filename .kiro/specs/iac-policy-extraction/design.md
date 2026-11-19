@@ -171,7 +171,7 @@ Result entry (existing keys unchanged, `source` is new and optional):
 - **Pulumi:** fixtures written from the documented formats. Tests include the unknown marker and delete steps.
 - **Pipeline:** Stubber-based tests that `validate_policy_documents` sends the right `policyType`, resource type and document text; checks use `documents` and `reference_documents`.
 - **Live check:** run the Terraform fixture against the real Access Analyzer API (validation is free).
-- **Compatibility:** existing 235 tests must pass unchanged; Python 3.8 with boto3 1.34.138 must pass.
+- **Compatibility:** existing 235 tests must pass unchanged; Python 3.9 with boto3 1.36.0 must pass (when written: Python 3.8 with boto3 1.34.138; both floors were raised in 4.0).
 
 ## Risks
 

@@ -10,7 +10,7 @@ or from the API is HTML-escaped. Without JavaScript all content stays visible.
 import html
 import json
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 from urllib.parse import urlparse
 
 from ..iam_access_analyzer.constants import SEVERITY_ORDER
@@ -209,7 +209,7 @@ def _badge(finding_type: str) -> str:
     return f'<span class="badge {css}"><span aria-hidden="true">{icon}</span>{_esc(label)}</span>'
 
 
-def _render_finding(finding: Dict[str, Any]) -> str:
+def _render_finding(finding: dict[str, Any]) -> str:
     finding_type = str(finding.get("findingType", "UNKNOWN"))
     _label, css, _icon = _severity(finding_type)
     code = finding.get("issueCode") or "N/A"
@@ -259,7 +259,7 @@ def _render_finding(finding: Dict[str, Any]) -> str:
     )
 
 
-def _render_policy(result: Dict[str, Any]) -> str:
+def _render_policy(result: dict[str, Any]) -> str:
     name = str(result.get("filePolicy", "Unknown policy"))
     findings = [f for f in result.get("summary", []) if not is_placeholder(f)]
     findings.sort(
@@ -270,7 +270,7 @@ def _render_policy(result: Dict[str, Any]) -> str:
         )
     )
 
-    counts: Dict[str, int] = {}
+    counts: dict[str, int] = {}
     for finding in findings:
         kind = str(finding.get("findingType", "UNKNOWN"))
         counts[kind] = counts.get(kind, 0) + 1
@@ -316,7 +316,7 @@ def _render_policy(result: Dict[str, Any]) -> str:
     )
 
 
-def _verdict(counts: Dict[str, int], total: int) -> str:
+def _verdict(counts: dict[str, int], total: int) -> str:
     if counts["ERROR"]:
         return (
             '<div class="verdict fail" role="status"><span class="icon" aria-hidden="true">\u2716</span>'
@@ -337,9 +337,9 @@ def _verdict(counts: Dict[str, int], total: int) -> str:
 
 
 def render_html(
-    results: List[Dict[str, Any]],
+    results: list[dict[str, Any]],
     generated_at: Optional[datetime] = None,
-    metadata: Optional[Dict[str, Any]] = None,
+    metadata: Optional[dict[str, Any]] = None,
 ) -> str:
     """Render the full report document.
 

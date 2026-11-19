@@ -12,7 +12,7 @@ people and for CI/CD pipelines.
 - **Reports:** JSON, text, [HTML](assets/sample-report.html), Markdown, JUnit XML (CodeBuild, Azure Pipelines, Jenkins, GitLab) and SARIF (GitHub code scanning).
 - **Pipeline friendly:** specific exit codes, `--fail-on` severity thresholds, `--dry-run`, JSON logs, S3 upload and ZIP archives.
 - **Configuration:** command line, YAML or TOML file, and environment variables, with a documented precedence.
-- **Compatible:** upgrading within 3.x never removes a flag, config key or exit code. Newer API features are used only when your installed boto3 supports them.
+- **Compatible:** upgrading within a major version never removes a flag, config key or exit code. Newer API features are used only when your installed boto3 supports them.
 
 ## Quick start
 
@@ -34,7 +34,7 @@ validate-aws-policies -d ./policies --check-no-new-access --reference-path ./bas
 
 ## Requirements
 
-- Python 3.8 or newer
+- Python 3.9 or newer
 - AWS credentials (profile, SSO or environment) allowed to call `access-analyzer:ValidatePolicy`.
   Custom checks and S3 upload need more permissions, see [Installation](installation.md#iam-permissions).
 

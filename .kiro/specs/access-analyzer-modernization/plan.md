@@ -1,5 +1,7 @@
 # Plan: adopt current IAM Access Analyzer capabilities (backward compatible)
 
+> Note: the 3.x compatibility floors described here (Python 3.8, boto3 1.34.138) were raised in 4.0 to Python 3.9 and boto3 1.36.0.
+
 Status: **implemented in 3.2.0** (Phases 0 to 3, delivered together). Decisions taken: `--continue-on-error` stays opt-in until 4.0; failed custom checks exit with code 1. Deviations from the original proposal are listed at the end. Default-changing work is deferred to 4.0.
 
 ## 1. What changed in Access Analyzer since the tool was written

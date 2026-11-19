@@ -20,7 +20,7 @@ Input is a directory of policy files, or (`--input`) the policies inside a Terra
 ## Behavior that matters
 
 - Default: an `ERROR`-level finding aborts the run (`validate_findings` raises `ValueError`, exit code 1). `--continue-on-error` and `--fail-on` (opt-in) validate everything, write the reports, then fail by threshold. A failed custom check is an ERROR finding (`CHECK_*` issue codes, `details.source == "custom_check"`) and exits 1 after reports are written.
-- Backward compatibility is a hard rule in 3.x: no flag, config key, exit code or default output is removed or changed. New features are opt-in and feature-detected against the installed boto3 (floor stays 1.34.138; an unsupported request exits 2).
+- Backward compatibility is a hard rule within a major version (4.x now; 4.0 dropped Python 3.8 and raised the boto3 floor to 1.36.0): no flag, config key, exit code or default output is removed or changed. New features are opt-in and feature-detected against the installed boto3 (floor stays 1.34.138; an unsupported request exits 2).
 - Exit codes live in `cli/exit_codes.py`: 0 success, 1 validation or failed check, 2 config (including an SDK too old for a requested feature), 3 AWS API error, 4 file. CI users depend on these, so do not renumber them.
 - Config precedence, lowest to highest: defaults, config file (YAML/TOML), environment variables, CLI arguments.
 - Environment variables: `AWS_PROFILE`, `REPORTS_BUCKET`, `POLICIES_PATH`, `LOG_LEVEL`.

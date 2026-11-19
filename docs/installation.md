@@ -30,12 +30,13 @@ validate-aws-policies --version
 
 ### Python and boto3 versions
 
-- Python 3.8 or newer.
-- boto3 1.34.138 or newer (installed automatically).
+- Python 3.9 or newer (tested on 3.9 to 3.14).
+- boto3 1.36.0 or newer (installed automatically). On Python 3.9 pip installs the newest boto3
+  that still supports 3.9.
 
-Newer Access Analyzer features need a newer boto3. For example, `--policy-type rcp` needs a
-boto3 release that knows resource control policies. If your boto3 is too old the tool exits
-with code 2 and tells you what to upgrade:
+boto3 1.36.0 knows resource control policies and the three custom policy checks. Access Analyzer
+may add resource types later. If a requested value is newer than your boto3, the tool exits with
+code 2 and tells you what to upgrade:
 
 ```bash
 pip install --upgrade boto3 botocore

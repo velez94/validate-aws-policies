@@ -6,7 +6,17 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 <!-- insertion marker -->
-## [Unreleased]
+## [4.0.0]
+
+### Breaking changes
+
+- **Python 3.8 is no longer supported.** The package requires Python 3.9 or newer and is tested on 3.9 to 3.14.
+- **The minimum boto3 version is now 1.36.0** (was 1.34.138). Pip installs a newer boto3 automatically.
+- The unused dependencies `json2html` and `zipp` were removed. Nothing in the package imported them. If your own code relied on them being installed with this package, add them to your requirements.
+- Behavior that was wrong now follows the documentation, which can change the exit status of existing pipelines: a failed S3 upload exits with code 3 (it exited 0), and `verbose`, `quiet` and `log_format` in a config file and the `LOG_LEVEL` variable are applied (they were ignored). See *Fixed*.
+
+All command-line options, config keys and the result format of 3.x keep working.
+
 
 ### Added
 

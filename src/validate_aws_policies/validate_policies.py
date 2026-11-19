@@ -3,7 +3,7 @@
 import logging
 import sys
 from datetime import datetime, timezone
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 import boto3
 from botocore.exceptions import BotoCoreError, ClientError
@@ -87,7 +87,7 @@ def setup_logging(
     root_logger.addHandler(console_handler)
 
 
-def merge_config(args: Any) -> Dict[str, Any]:
+def merge_config(args: Any) -> dict[str, Any]:
     """Merge configuration from multiple sources with proper precedence.
 
     Precedence order (lowest to highest):

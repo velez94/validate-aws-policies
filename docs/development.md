@@ -20,8 +20,8 @@ mkdocs serve                  # docs at http://127.0.0.1:8000
 mkdocs build --strict         # fails on broken links and missing files
 ```
 
-The GitHub Actions workflow `test.yml` runs lint and tests on Python 3.8 to 3.13 for every
-pull request.
+The GitHub Actions workflow `test.yml` runs lint and tests on Python 3.9 to 3.14 for every
+pull request, plus a `floor` job with Python 3.9 and boto3 1.36.0, the oldest supported pair.
 
 ## Code layout
 
@@ -38,10 +38,12 @@ docs/                      this site
 
 ## Rules for changes
 
-- **Do not break users within 3.x.** Never remove or rename a flag, config key or exit
-  code, and keep defaults. New behavior is opt-in.
-- **Keep the boto3 floor** (`>=1.34.138`) and Python 3.8 syntax (`typing.List`, not
-  `list[str]`). New API features must be detected at run time, see
+- **Do not break users within a major version.** Never remove or rename a flag, config key or
+  exit code, and keep defaults. New behavior is opt-in. Breaking changes wait for the next
+  major version and are listed in the changelog.
+- **Keep the supported range:** Python 3.9 and newer, boto3 `>=1.36.0`. Write 3.9-compatible
+  syntax (`list[str]` is fine, `X | Y` unions are not). Raising either floor is a breaking
+  change and needs a major version. New API features must be detected at run time, see
   `iam_access_analyzer/features.py`.
 - **Tests never call AWS.** Use botocore's `Stubber` or `unittest.mock`. Custom policy checks
   cost money per call.

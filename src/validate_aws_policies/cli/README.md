@@ -140,7 +140,7 @@ except ConfigError as e:
 ## Dependencies
 
 ### Required
-- Python 3.8+
+- Python 3.9+
 
 ### Optional
 - `pyyaml` - For YAML configuration file support

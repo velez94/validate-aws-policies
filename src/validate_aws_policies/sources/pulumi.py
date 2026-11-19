@@ -5,7 +5,7 @@ missing keys are skipped instead of failing.
 """
 
 import logging
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 from .base import (
     ORGANIZATION_POLICY_TYPES,
@@ -47,9 +47,9 @@ def _contains_unknown(value: Any) -> bool:
     return False
 
 
-def _states(data: Dict[str, Any], options: ExtractOptions) -> List[Dict[str, Any]]:
+def _states(data: dict[str, Any], options: ExtractOptions) -> list[dict[str, Any]]:
     """Resource states from a stack export or the new states of a preview."""
-    states: List[Dict[str, Any]] = []
+    states: list[dict[str, Any]] = []
     deployment = data.get("deployment")
     if isinstance(deployment, dict) and "resources" in deployment:
         for resource in deployment.get("resources") or []:
@@ -69,7 +69,7 @@ def _states(data: Dict[str, Any], options: ExtractOptions) -> List[Dict[str, Any
     return states
 
 
-def _name_and_type(state: Dict[str, Any]) -> Optional[tuple]:
+def _name_and_type(state: dict[str, Any]) -> Optional[tuple]:
     urn = state.get("urn") or ""
     resource_type = state.get("type") or ""
     parts = urn.split("::")
@@ -78,7 +78,7 @@ def _name_and_type(state: Dict[str, Any]) -> Optional[tuple]:
     return (resource_type, urn) if resource_type else None
 
 
-def _lookup(state: Dict[str, Any], key: str) -> Any:
+def _lookup(state: dict[str, Any], key: str) -> Any:
     """Read an attribute from ``inputs`` first (what the author wrote), then ``outputs``."""
     for section in ("inputs", "outputs"):
         values = state.get(section)
@@ -88,12 +88,12 @@ def _lookup(state: Dict[str, Any], key: str) -> Any:
 
 
 def extract_pulumi(
-    data: Dict[str, Any], file: str, options: Optional[ExtractOptions] = None
+    data: dict[str, Any], file: str, options: Optional[ExtractOptions] = None
 ) -> ExtractionResult:
     """Extract policy documents from parsed Pulumi JSON."""
     options = options or ExtractOptions()
     result = ExtractionResult()
-    by_type: Dict[str, List[MapEntry]] = {}
+    by_type: dict[str, list[MapEntry]] = {}
     for entry in PULUMI_MAP:
         by_type.setdefault(entry.iac_type, []).append(entry)
 
