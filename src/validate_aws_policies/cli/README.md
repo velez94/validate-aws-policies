@@ -55,7 +55,7 @@ The following environment variables are supported:
 |---------------------|------------|-------------|
 | `AWS_PROFILE` | `profile` | AWS profile name for Access Analyzer API |
 | `REPORTS_BUCKET` | `bucket_name` | S3 bucket for report uploads |
-| `POLICIES_PATH` | `directory_policies_path` | Directory containing policy files |
+| `POLICIES_PATH` | `policies_path` (and `directory_policies_path`) | Directory containing policy files |
 | `LOG_LEVEL` | `log_level` | Logging level (DEBUG, INFO, WARNING, ERROR) |
 
 Example:
@@ -77,9 +77,9 @@ validate-aws-policies -d /path/to/policies
 # config.yaml
 profile: my-aws-profile
 bucket_name: my-reports-bucket
-directory_policies_path: ./policies
-upload_report: true
-zip_reports: false
+policies_path: ./policies
+upload: true
+zip: false
 ci: false
 log_level: INFO
 ```
@@ -90,9 +90,9 @@ log_level: INFO
 # config.toml
 profile = "my-aws-profile"
 bucket_name = "my-reports-bucket"
-directory_policies_path = "./policies"
-upload_report = true
-zip_reports = false
+policies_path = "./policies"
+upload = true
+zip = false
 ci = false
 log_level = "INFO"
 ```

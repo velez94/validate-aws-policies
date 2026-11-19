@@ -154,3 +154,55 @@ class TestReportSmoke:
         report.write_text("x")
         zip_path = create_zip([report.relative_to(tmp_path)])
         assert zip_path.exists() and zip_path.suffix == ".zip"
+
+
+class TestLoggingFromConfig:
+    """verbose, quiet, log_format and LOG_LEVEL set outside the command line are honored."""
+
+    def run_with_config(self, tmp_path, monkeypatch, content, env=None):
+        for var in ("LOG_LEVEL", "POLICIES_PATH", "REPORTS_BUCKET", "AWS_PROFILE"):
+            monkeypatch.delenv(var, raising=False)
+        for key, value in (env or {}).items():
+            monkeypatch.setenv(key, value)
+        cfg = tmp_path / "c.yaml"
+        cfg.write_text(f"policies_path: {tmp_path}\n{content}")
+        with patch(f"{MOD}.PolicyValidator") as validator:
+            validator.return_value.run.return_value = EXIT_SUCCESS
+            code = run_main(["validate-aws-policies", "--config", str(cfg)])
+        return code, logging.getLogger().level
+
+    def teardown_method(self):
+        setup_logging()
+
+    def test_verbose_from_file(self, tmp_path, monkeypatch):
+        code, level = self.run_with_config(tmp_path, monkeypatch, "verbose: true\n")
+        assert code == EXIT_SUCCESS and level == logging.DEBUG
+
+    def test_quiet_from_file(self, tmp_path, monkeypatch):
+        _, level = self.run_with_config(tmp_path, monkeypatch, "quiet: true\n")
+        assert level == logging.ERROR
+
+    def test_log_level_env(self, tmp_path, monkeypatch):
+        _, level = self.run_with_config(tmp_path, monkeypatch, "", env={"LOG_LEVEL": "WARNING"})
+        assert level == logging.WARNING
+
+    def test_invalid_log_level_falls_back_to_info(self):
+        setup_logging(log_level="loud")
+        assert logging.getLogger().level == logging.INFO
+
+    def test_json_log_format_from_file(self, tmp_path, monkeypatch):
+        self.run_with_config(tmp_path, monkeypatch, "log_format: json\n")
+        handler = logging.getLogger().handlers[0]
+        assert type(handler.formatter).__name__ == "JSONFormatter"
+
+    def test_verbose_and_quiet_in_file_is_a_config_error(self, tmp_path, monkeypatch):
+        code, _ = self.run_with_config(tmp_path, monkeypatch, "verbose: true\nquiet: true\n")
+        assert code == EXIT_CONFIG_ERROR
+
+    def test_command_line_flag_beats_file(self, tmp_path, monkeypatch):
+        cfg = tmp_path / "c.yaml"
+        cfg.write_text(f"policies_path: {tmp_path}\nquiet: true\n")
+        with patch(f"{MOD}.PolicyValidator") as validator:
+            validator.return_value.run.return_value = EXIT_SUCCESS
+            run_main(["validate-aws-policies", "--config", str(cfg), "--verbose"])
+        assert logging.getLogger().level == logging.DEBUG

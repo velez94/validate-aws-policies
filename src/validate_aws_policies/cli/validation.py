@@ -87,6 +87,9 @@ def validate_merged_config(config: Dict[str, Any]) -> List[str]:
     if fail_on is not None and fail_on not in FAIL_ON_LEVELS:
         errors.append(f"Unsupported fail_on '{fail_on}'. Supported: {', '.join(FAIL_ON_LEVELS)}")
 
+    if config.get("verbose") and config.get("quiet"):
+        errors.append("verbose and quiet cannot both be enabled")
+
     max_findings = config.get("max_findings")
     if max_findings is not None and (not isinstance(max_findings, int) or max_findings < 1):
         errors.append("max_findings must be a positive integer")

@@ -7,6 +7,7 @@ from unittest.mock import patch
 import pytest
 
 from validate_aws_policies.cli.exit_codes import (
+    EXIT_AWS_ERROR,
     EXIT_FILE_ERROR,
     EXIT_SUCCESS,
     EXIT_VALIDATION_ERROR,
@@ -163,3 +164,12 @@ class TestReportsAndUpload:
             assert v.run() == EXIT_SUCCESS
         html.assert_not_called()
         up.assert_not_called()
+
+
+class TestUploadFailure:
+    def test_failed_upload_exits_with_aws_error(self, policies_dir):
+        v = make(policies_dir, format="html", upload=True, bucket_name="b")
+        with patch(f"{MODULE}.validate_policies", return_value=RESULTS), patch.object(
+            v.report_generator, "create_html_report", return_value=Path("r.html")
+        ), patch(f"{MODULE}.upload_file", return_value=False):
+            assert v.run() == EXIT_AWS_ERROR

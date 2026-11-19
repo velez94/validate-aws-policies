@@ -254,7 +254,8 @@ Examples:
         "-c",
         "--ci",
         action="store_true",
-        help="Run in CI/CD pipeline mode (non-interactive, strict validation)",
+        help="Reserved for CI/CD pipelines. Currently has no effect on behavior; use "
+        "--fail-on, --format xml/sarif and --log-format json for pipelines",
     )
 
     parser.add_argument(

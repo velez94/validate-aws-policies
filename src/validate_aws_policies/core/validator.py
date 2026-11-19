@@ -26,6 +26,10 @@ from ..version import __version__
 logger = logging.getLogger(__name__)
 
 
+class UploadError(Exception):
+    """Raised when a report could not be uploaded to S3 (exit code 3)."""
+
+
 class PolicyValidator:
     """Orchestrate policy validation workflow."""
 
@@ -153,7 +157,7 @@ class PolicyValidator:
         except SdkFeatureError as e:
             logger.error(str(e))
             return EXIT_CONFIG_ERROR
-        except (ClientError, BotoCoreError) as e:
+        except (ClientError, BotoCoreError, UploadError) as e:
             logger.error(f"AWS API error: {e}")
             return EXIT_AWS_ERROR
         except FileNotFoundError as e:
@@ -392,7 +396,12 @@ class PolicyValidator:
 
         date = datetime.today().strftime("%Y/%m/%d")
 
+        failed = []
         for file_path in files:
             key = f"AccessAnalyzer/{date}/{file_path.name}"
             logger.info(f"Uploading {file_path.name} to s3://{bucket}/{key}")
-            upload_file(file_path, bucket, key)
+            if not upload_file(file_path, bucket, key):
+                failed.append(file_path.name)
+
+        if failed:
+            raise UploadError(f"Failed to upload to s3://{bucket}: {', '.join(failed)}")

@@ -3,7 +3,7 @@
 import logging
 import sys
 from datetime import datetime, timezone
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 import boto3
 from botocore.exceptions import BotoCoreError, ClientError
@@ -24,13 +24,20 @@ from .iam_access_analyzer.features import SdkFeatureError
 from .version import __version__
 
 
-def setup_logging(verbose: bool = False, quiet: bool = False, log_format: str = "text") -> None:
+def setup_logging(
+    verbose: bool = False,
+    quiet: bool = False,
+    log_format: str = "text",
+    log_level: Optional[str] = None,
+) -> None:
     """Configure logging based on verbosity flags.
 
     Args:
         verbose: Enable DEBUG level logging
         quiet: Enable ERROR level logging only
         log_format: Log format ('text' or 'json')
+        log_level: Level name (DEBUG, INFO, WARNING, ERROR) used when neither
+            verbose nor quiet is set, for example from the LOG_LEVEL variable
     """
     # Determine log level
     if verbose:
@@ -38,7 +45,8 @@ def setup_logging(verbose: bool = False, quiet: bool = False, log_format: str = 
     elif quiet:
         level = logging.ERROR
     else:
-        level = logging.INFO
+        named = getattr(logging, str(log_level or "INFO").upper(), None)
+        level = named if isinstance(named, int) else logging.INFO
 
     # Configure format
     if log_format == "json":
@@ -157,8 +165,15 @@ def merge_config(args: Any) -> Dict[str, Any]:
         config["output"] = args.output
 
     # Logging configuration
-    config["verbose"] = args.verbose
-    config["quiet"] = args.quiet
+    # --verbose and --quiet are mutually exclusive; a flag on the command line wins
+    # over the other spelling coming from a config file.
+    if args.verbose:
+        config["verbose"], config["quiet"] = True, False
+    elif args.quiet:
+        config["verbose"], config["quiet"] = False, True
+    else:
+        config["verbose"] = bool(config.get("verbose"))
+        config["quiet"] = bool(config.get("quiet"))
     config["log_format"] = args.log_format or config.get("log_format") or "text"
 
     return config
@@ -197,6 +212,13 @@ def main() -> int:
         # Merge configuration from all sources
         try:
             config = merge_config(args)
+            # Logging options may come from the config file or LOG_LEVEL
+            setup_logging(
+                verbose=config["verbose"],
+                quiet=config["quiet"],
+                log_format=config["log_format"],
+                log_level=config.get("log_level"),
+            )
             logger.debug(f"Merged configuration: {config}")
         except ConfigError as e:
             logger.error(f"Configuration error: {e}")
