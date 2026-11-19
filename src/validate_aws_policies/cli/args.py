@@ -10,7 +10,9 @@ This module provides argument parsing with:
 
 import argparse
 from pathlib import Path
-from typing import Optional
+from typing import List, Optional
+
+from ..iam_access_analyzer.constants import FAIL_ON_LEVELS, LOCALES, RESOURCE_TYPES
 
 try:
     import argcomplete
@@ -18,6 +20,11 @@ try:
     ARGCOMPLETE_AVAILABLE = True
 except ImportError:
     ARGCOMPLETE_AVAILABLE = False
+
+
+def _csv(value: str) -> List[str]:
+    """Split a comma separated argument into a list of non-empty items."""
+    return [item.strip() for item in value.split(",") if item.strip()]
 
 
 class ArgumentValidationError(Exception):
@@ -83,6 +90,118 @@ Examples:
         help="Directory path containing policy files in JSON format",
     )
 
+    parser.add_argument(
+        "-t",
+        "--policy-type",
+        choices=["identity", "resource", "scp", "rcp"],
+        default=None,
+        help="Type of policies in the directory (default: identity). "
+        "scp = service control policy, rcp = resource control policy",
+    )
+
+    parser.add_argument(
+        "--resource-type",
+        type=str,
+        default=None,
+        metavar="TYPE",
+        help="Resource type for resource policies (only with --policy-type resource): "
+        + ", ".join(RESOURCE_TYPES)
+        + " or an AWS::Service::Type value",
+    )
+
+    parser.add_argument(
+        "--locale",
+        type=str.upper,
+        choices=list(LOCALES),
+        default=None,
+        help="Language of the finding messages (default: EN)",
+    )
+
+    parser.add_argument(
+        "--max-findings",
+        type=int,
+        default=None,
+        metavar="N",
+        help="Collect at most N findings per policy (default: all)",
+    )
+
+    parser.add_argument(
+        "-r",
+        "--recursive",
+        action="store_true",
+        help="Also validate *.json files in sub-directories",
+    )
+
+    # Failure handling
+    parser.add_argument(
+        "--continue-on-error",
+        action="store_true",
+        help="Do not stop at the first ERROR finding: validate everything, write the "
+        "reports, then exit with code 1 if any ERROR was found",
+    )
+
+    parser.add_argument(
+        "--fail-on",
+        choices=list(FAIL_ON_LEVELS),
+        default=None,
+        help="Exit with code 1 when a finding of this severity or higher exists "
+        "(error, security-warning, warning, suggestion) or never (none). "
+        "Implies --continue-on-error",
+    )
+
+    # Custom policy checks
+    checks = parser.add_argument_group(
+        "custom policy checks",
+        "Extra IAM Access Analyzer checks for identity and resource policies. "
+        "A failed check is reported as an ERROR finding and exits with code 1.",
+    )
+    checks.add_argument(
+        "--check-no-new-access",
+        action="store_true",
+        help="Fail if a policy grants access not granted by the policy with the same file "
+        "name in --reference-path",
+    )
+    checks.add_argument(
+        "--reference-path",
+        type=str,
+        default=None,
+        metavar="DIR",
+        help="Directory with the reference (baseline) policies for --check-no-new-access",
+    )
+    checks.add_argument(
+        "--strict-references",
+        action="store_true",
+        help="Treat a policy without a reference file as a failed check (default: skip it)",
+    )
+    checks.add_argument(
+        "--check-access-not-granted",
+        action="store_true",
+        help="Fail if a policy grants any of --deny-actions on any of --deny-resources",
+    )
+    checks.add_argument(
+        "--deny-actions",
+        type=_csv,
+        default=None,
+        metavar="A,B",
+        help="Comma separated actions that must not be granted (for example iam:*,s3:Delete*)",
+    )
+    checks.add_argument(
+        "--deny-resources",
+        type=_csv,
+        default=None,
+        metavar="ARN,ARN",
+        help="Comma separated resource ARNs that must not be accessible",
+    )
+    checks.add_argument(
+        "--check-no-public-access",
+        type=str,
+        default=None,
+        metavar="RESOURCE_TYPE",
+        help="Fail if a resource policy can grant public access to this resource type "
+        "(for example s3-bucket, kms-key, sqs-queue or AWS::S3::Bucket). "
+        "Use with --policy-type resource",
+    )
+
     # AWS configuration
     parser.add_argument(
         "-p",
@@ -96,9 +215,11 @@ Examples:
     parser.add_argument(
         "-f",
         "--format",
-        choices=["json", "text", "html", "md", "markdown", "xml", "junit"],
-        default="json",
-        help="Output format for validation results (default: json). Use xml/junit for CI/CD integration",
+        choices=["json", "text", "html", "md", "markdown", "xml", "junit", "sarif", "all"],
+        default=None,
+        help="Output format for validation results (default: json). "
+        "Use xml/junit for CI/CD and sarif for code scanning tools. "
+        "'all' writes html, md and xml",
     )
 
     parser.add_argument(
@@ -157,7 +278,7 @@ Examples:
     parser.add_argument(
         "--log-format",
         choices=["text", "json"],
-        default="text",
+        default=None,
         help="Log output format (default: text)",
     )
 
@@ -214,6 +335,15 @@ def validate_args(args: argparse.Namespace) -> None:
                 "Supported formats: .yaml, .yml, .toml"
             )
 
+    # Validate custom check inputs that can be verified without the config file
+    reference_path = getattr(args, "reference_path", None)
+    if reference_path and not Path(reference_path).is_dir():
+        errors.append(f"Reference path is not a directory: {reference_path}")
+
+    max_findings = getattr(args, "max_findings", None)
+    if max_findings is not None and max_findings < 1:
+        errors.append("--max-findings must be a positive integer")
+
     # Validate --dry-run conflicts
     if args.dry_run:
         if args.upload:
@@ -222,7 +352,10 @@ def validate_args(args: argparse.Namespace) -> None:
             errors.append("--dry-run cannot be used with --zip")
 
     # Validate output file extension matches format
-    if args.output and args.format:
+    if args.output and (args.format or "json") == "all":
+        errors.append("--output cannot be used with --format all (it writes several files)")
+    elif args.output:
+        output_format = args.format or "json"
         output_path = Path(args.output)
         # Map format to expected extension (junit -> xml)
         format_to_ext = {
@@ -232,13 +365,19 @@ def validate_args(args: argparse.Namespace) -> None:
             "md": ".md",
             "markdown": ".md",
             "xml": ".xml",
-            "junit": ".xml"
+            "junit": ".xml",
+            "sarif": ".sarif",
         }
-        expected_ext = format_to_ext.get(args.format, f".{args.format}")
-        if output_path.suffix.lower() != expected_ext:
+        expected_ext = format_to_ext.get(output_format, f".{output_format}")
+        allowed_ext = {expected_ext}
+        if output_format == "text":
+            allowed_ext.add(".txt")
+        if output_format == "sarif":
+            allowed_ext.add(".json")
+        if output_path.suffix.lower() not in allowed_ext:
             errors.append(
                 f"Output file extension {output_path.suffix} does not match "
-                f"format {args.format} (expected {expected_ext})"
+                f"format {output_format} (expected {' or '.join(sorted(allowed_ext))})"
             )
 
     # If there are validation errors, raise exception

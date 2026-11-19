@@ -40,7 +40,10 @@ class TestValidatePolicies:
 
         # Assert
         assert len(result) == 1
-        mock_boto3.client.assert_called_once_with("accessanalyzer")
+        mock_boto3.client.assert_called_once()
+        assert mock_boto3.client.call_args.args == ("accessanalyzer",)
+        retries = mock_boto3.client.call_args.kwargs["config"].retries
+        assert retries["mode"] == "adaptive"
         mock_read_policies.assert_called_once()
         mock_validate_findings.assert_called_once()
 

@@ -9,6 +9,7 @@ nav:
   - Installation: installation.md
   - Usage: usage.md
   - Configuration: configuration.md
+  - Policy Types & Custom Checks: access-analyzer-features.md
   - Examples: examples.md
   - API Reference: api.md
   - Changelog: changelog.md

@@ -1,6 +1,7 @@
 # Validate AWS policies 
 
-This package scan **AWS SCP** policies and create report in HTML format.
+This package validates AWS IAM policies (identity, resource, SCP and RCP) with the IAM Access Analyzer
+`ValidatePolicy` API and creates reports in HTML, Markdown or JUnit XML format.
 
 # Pre-Requirements
 Setup AWS Cli profile for interacting with IAM access analyzer API using IAM or SSO credentials.
@@ -44,30 +45,66 @@ index-url=https://pkgs.dev.azure.com/<organizations>/.../_packaging/.../pypi/sim
 ```
 # Instructions
 
-```commandline 
+```commandline
 validate-aws-policies -h
-usage: validate-aws-policies [-h] [-c] [-u UPLOAD_REPORT] [-b] [-d DIRECTORY_POLICIES_PATH] [-p PROFILE] [-z] [-cp] [-v]
+usage: validate-aws-policies [-h] [-v] [--config FILE] [-d PATH] [-t {identity,resource,scp,rcp}]
+                             [-p NAME] [-f {json,text,html,md,markdown,xml,junit,sarif,all}] [-o FILE] [-z]
+                             [-u] [-b NAME] [-c] [--dry-run] [--verbose | --quiet]
+                             [--log-format {text,json}]
 
 options:
   -h, --help            show this help message and exit
-  -c, --ci              Run into pipeline if it's present
-  -u UPLOAD_REPORT, --upload_report UPLOAD_REPORT
-                        Upload reports to s3 bucket
-  -b, --bucket_name     Use this flag for setting the bucket tool if --upload_report is present.
-  -d DIRECTORY_POLICIES_PATH, --directory_policies_path DIRECTORY_POLICIES_PATH
-                        Path where Policies are defined in json format
-  -p PROFILE, --profile PROFILE
-                        AWS cli profile for Access Analyzer Api
-  -z, --zip_reports     Set in True if you want to create a zip file for reports
-  -cp, --create_pdf_reports
-                        Set it if you want to create a pdf report, this need wkhtmltopdf file for reports
-  -v, --version         Print the package version
+  -v, --version         Print the package version and exit
+  --config FILE         Path to configuration file (YAML or TOML format)
+  -d, --policies-path PATH
+                        Directory path containing policy files in JSON format
+  -t, --policy-type {identity,resource,scp,rcp}
+                        Type of policies in the directory (default: identity)
+  --resource-type TYPE  Resource type for resource policies (s3-bucket, trust-policy, ...)
+  --locale LOCALE       Language of the finding messages (default: EN)
+  --max-findings N      Collect at most N findings per policy (default: all)
+  -r, --recursive       Also validate *.json files in sub-directories
+  --continue-on-error   Validate everything, write reports, then exit 1 on any ERROR
+  --fail-on LEVEL       Exit 1 at this severity or higher: error, security-warning,
+                        warning, suggestion, none
+  -p, --profile NAME    AWS CLI profile name for Access Analyzer API
+  -f, --format          Output format (default: json). Use xml/junit for CI/CD integration
+  -o, --output FILE     Output file path
+  -z, --zip             Create ZIP archive of generated reports
+  -u, --upload          Upload generated reports to S3 bucket
+  -b, --bucket NAME     S3 bucket name (required with --upload)
+  -c, --ci              Run in CI/CD pipeline mode
+  --dry-run             Validate without creating reports or uploading
+  --verbose / --quiet   DEBUG or ERROR-only logging
+  --log-format          Log output format: text or json
+
+custom policy checks (identity and resource policies; billed per API call):
+  --check-no-new-access        Fail if a policy grants more than its baseline in --reference-path
+  --check-access-not-granted   Fail if --deny-actions / --deny-resources are granted
+  --check-no-public-access RESOURCE_TYPE
+                               Fail if a resource policy can be public (for example s3-bucket)
 ```
+
+See `docs/access-analyzer-features.md` for policy types, custom checks, policy sets,
+SARIF output and CI examples.
+
+Exit codes: `0` success, `1` validation error, `2` configuration error, `3` AWS API error, `4` file error.
+
+Settings can also come from a YAML/TOML file (`--config`) and the environment variables
+`AWS_PROFILE`, `REPORTS_BUCKET`, `POLICIES_PATH` and `LOG_LEVEL`. Precedence, lowest to highest:
+defaults, config file, environment variables, CLI arguments. See `config.example.yaml`.
+
 # Examples 
 
 
 ```commandline
-validate-aws-policies -d project_configurations/policies/ -p sh-devsecops
+validate-aws-policies -d project_configurations/policies/ -p sh-devsecops --format html
+
+# Validate service control policies and write a JUnit report for CI
+validate-aws-policies -d scps/ --policy-type scp --format xml
+
+# Fail a pull request when a policy grants more access than the baseline
+validate-aws-policies -d policies/ --check-no-new-access --reference-path baseline/ --format sarif
 ```
 ![Example_validate_pol](docs/img/rec_validate.gif)
 
@@ -98,4 +135,4 @@ and to make sure that bash knows about this script, you use
 echo 'eval "$(register-python-argcomplete validate-aws-policies)"' >> ~/.bashrc
 source ~/.bashrc
 
-```
+```

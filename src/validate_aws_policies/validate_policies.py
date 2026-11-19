@@ -2,6 +2,7 @@
 
 import logging
 import sys
+from datetime import datetime, timezone
 from typing import Any, Dict
 
 import boto3
@@ -17,7 +18,9 @@ from .cli.exit_codes import (
     EXIT_SUCCESS,
     EXIT_VALIDATION_ERROR,
 )
+from .cli.validation import apply_checks_section, validate_merged_config
 from .core.validator import PolicyValidator
+from .iam_access_analyzer.features import SdkFeatureError
 from .version import __version__
 
 
@@ -40,12 +43,11 @@ def setup_logging(verbose: bool = False, quiet: bool = False, log_format: str = 
     # Configure format
     if log_format == "json":
         import json as json_module
-        from datetime import datetime
 
         class JSONFormatter(logging.Formatter):
             def format(self, record: logging.LogRecord) -> str:
                 log_data = {
-                    "timestamp": datetime.utcnow().isoformat(),
+                    "timestamp": datetime.now(timezone.utc).replace(tzinfo=None).isoformat(),
                     "level": record.levelname,
                     "message": record.getMessage(),
                     "module": record.module,
@@ -98,36 +100,66 @@ def merge_config(args: Any) -> Dict[str, Any]:
     # Load config from file and environment variables
     config_loader = ConfigLoader(config_file=args.config)
     config = config_loader.load_config()
+    apply_checks_section(config)
 
-    # Override with CLI arguments (only if explicitly provided)
-    # Note: argparse sets defaults, so we need to check if values were actually provided
+    # Override with CLI arguments, only when they were explicitly provided.
+    # Boolean flags are store_true, so False means "not given" and must not
+    # replace a value from the config file or environment.
     if args.policies_path:
         config["policies_path"] = args.policies_path
-    elif "directory_policies_path" in config:
-        # Map old config key to new key
-        config["policies_path"] = config["directory_policies_path"]
+        config["directory_policies_path"] = args.policies_path
 
     if args.profile:
         config["profile"] = args.profile
 
+    config["policy_type"] = args.policy_type or config.get("policy_type") or "identity"
+
+    # Options added in 3.2: value options only override when given; flags only when set.
+    for key in (
+        "resource_type",
+        "locale",
+        "max_findings",
+        "fail_on",
+        "reference_path",
+        "check_no_public_access",
+        "deny_actions",
+        "deny_resources",
+    ):
+        value = getattr(args, key, None)
+        if value is not None:
+            config[key] = value
+    for key in (
+        "recursive",
+        "continue_on_error",
+        "check_no_new_access",
+        "strict_references",
+        "check_access_not_granted",
+    ):
+        if getattr(args, key, False) is True:
+            config[key] = True
+        else:
+            config.setdefault(key, False)
+
     if args.bucket:
         config["bucket_name"] = args.bucket
 
-    # Boolean flags - these are always set by argparse
-    config["upload"] = args.upload
-    config["zip"] = args.zip
-    config["ci"] = args.ci
-    config["dry_run"] = args.dry_run
+    for key in ("upload", "zip", "ci", "dry_run"):
+        if getattr(args, key):
+            config[key] = True
+        else:
+            config.setdefault(key, False)
+    config["upload_report"] = config["upload"]
+    config["zip_reports"] = config["zip"]
 
     # Output configuration
-    config["format"] = args.format
+    config["format"] = args.format or config.get("format") or "json"
     if args.output:
         config["output"] = args.output
 
     # Logging configuration
     config["verbose"] = args.verbose
     config["quiet"] = args.quiet
-    config["log_format"] = args.log_format
+    config["log_format"] = args.log_format or config.get("log_format") or "text"
 
     return config
 
@@ -175,6 +207,20 @@ def main() -> int:
             logger.error("Policies path is required")
             return EXIT_CONFIG_ERROR
 
+        config_errors = validate_merged_config(config)
+        if config_errors:
+            for message in config_errors:
+                logger.error(f"Configuration error: {message}")
+            return EXIT_CONFIG_ERROR
+
+        if config.get("upload") and not config.get("bucket_name"):
+            logger.error("An S3 bucket is required to upload reports (--bucket or bucket_name)")
+            return EXIT_CONFIG_ERROR
+
+        if config.get("upload") and config.get("dry_run"):
+            logger.error("dry_run cannot be combined with upload")
+            return EXIT_CONFIG_ERROR
+
         # Setup AWS session with profile if provided
         if config.get("profile"):
             try:
@@ -200,7 +246,7 @@ def main() -> int:
         print(f"{Fore.RED}Error: {e}{Fore.RESET}", file=sys.stderr)
         return EXIT_CONFIG_ERROR
 
-    except ConfigError as e:
+    except (ConfigError, SdkFeatureError) as e:
         print(f"{Fore.RED}Configuration error: {e}{Fore.RESET}", file=sys.stderr)
         return EXIT_CONFIG_ERROR
 

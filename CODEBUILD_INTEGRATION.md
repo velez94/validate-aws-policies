@@ -272,6 +272,6 @@ Error Tests:
 ## Support
 
 For issues or questions:
-- Check the validation script: `python3 test_junit_xml_output.py <xml_file>`
+- Check the validation script: `python3 scripts/validate_junit_xml.py <xml_file>`
 - Review AWS CodeBuild logs for detailed error messages
 - Ensure IAM Access Analyzer API is available in your region

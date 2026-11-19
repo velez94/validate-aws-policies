@@ -3,16 +3,13 @@
 import json
 import logging
 import time
-from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
-from zipfile import ZipFile
 
 import boto3
 from botocore.config import Config
 from botocore.exceptions import ClientError
 from colorama import Fore
-
 
 logger = logging.getLogger(__name__)
 
@@ -49,19 +46,24 @@ def read_policies(file_path: Path) -> Optional[str]:
         raise
 
 
-def validate_findings(policy: str, findings: List[Dict[str, Any]]) -> Dict[str, Any]:
+def validate_findings(
+    policy: str, findings: List[Dict[str, Any]], fail_fast: bool = True
+) -> Dict[str, Any]:
     """
     Validate findings for a policy and return a summary of the findings.
 
     Args:
         policy: Policy file name
         findings: List of findings for the policy
+        fail_fast: Raise ``ValueError`` on the first ERROR finding (default, legacy
+            behavior). When False, ERROR findings are recorded like any other finding
+            so the whole run can finish and be reported.
 
     Returns:
         Dictionary containing filePolicy and summary of findings
 
     Raises:
-        ValueError: If ERROR-level finding is detected
+        ValueError: If ERROR-level finding is detected and ``fail_fast`` is True
     """
     policy_name = Path(policy).stem
     summary: Dict[str, Any] = {"filePolicy": policy, "summary": []}
@@ -83,7 +85,8 @@ def validate_findings(policy: str, findings: List[Dict[str, Any]]) -> Dict[str, 
         for f in findings:
             if f["findingType"] == "ERROR":
                 logger.error(f"Error finding in {policy_name}: {json.dumps(f, indent=4)}")
-                raise ValueError(f"ERROR - Found problems with policy {policy_name}")
+                if fail_fast:
+                    raise ValueError(f"ERROR - Found problems with policy {policy_name}")
 
             logger.warning(f"Summary for {policy_name}")
             logger.warning(f"policyName: {policy_name}")
@@ -153,25 +156,15 @@ def create_zip(file_paths: List[Path]) -> Path:
     """
     Create a zip file of the reports.
 
+    Deprecated: kept for backward compatibility. Use
+    ``ReportGenerator.create_zip`` instead.
+
     Args:
         file_paths: List of file paths to zip
 
     Returns:
         Path to the created zip file
     """
-    d = datetime.now()
-    zip_name = Path(f"reports_{d}.zip")
+    from .reports import ReportGenerator
 
-    logger.info("Creating zip archive.")
-
-    with ZipFile(zip_name, "w") as zip_file:
-        for file in file_paths:
-            logger.info(f"{file} Zipped!!")
-            zip_file.write(file)
-
-    logger.info("✅ All files zipped successfully!")
-    logger.info(f"{Fore.GREEN}✅ All files zipped successfully!{Fore.RESET}")
-
-    return zip_name
-
-
+    return ReportGenerator().create_zip(file_paths)

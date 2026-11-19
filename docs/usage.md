@@ -40,11 +40,21 @@ validate-aws-policies --policies-path ./policies --format html
 validate-aws-policies --policies-path ./policies --format md
 ```
 
+#### JUnit XML and SARIF
+
+```bash
+validate-aws-policies --policies-path ./policies --format xml
+validate-aws-policies --policies-path ./policies --format sarif
+```
+
 #### All Formats
 
 ```bash
-validate-aws-policies --policies-path ./policies --format all
+validate-aws-policies --policies-path ./policies --format all   # html, md and xml
 ```
+
+See [Policy Types & Custom Checks](access-analyzer-features.md) for SCP/RCP/resource
+policies, custom policy checks, `--fail-on`, policy sets and CI examples.
 
 ### Save Output to File
 
@@ -101,10 +111,17 @@ validate-aws-policies --config config.yaml
 ## Command-Line Options
 
 ```
-usage: validate-aws-policies [-h] [-v] [--config FILE] [-d PATH] [-p NAME]
-                              [-f {json,text,html,md,markdown,all}] [-o FILE]
-                              [-z] [-u] [-b NAME] [-c] [--dry-run]
+usage: validate-aws-policies [-h] [-v] [--config FILE] [-d PATH]
+                              [-t {identity,resource,scp,rcp}] [--resource-type TYPE]
+                              [--locale LOCALE] [--max-findings N] [-r]
+                              [--continue-on-error] [--fail-on LEVEL] [-p NAME]
+                              [-f {json,text,html,md,markdown,xml,junit,sarif,all}]
+                              [-o FILE] [-z] [-u] [-b NAME] [-c] [--dry-run]
                               [--verbose | --quiet] [--log-format {text,json}]
+                              [--check-no-new-access] [--reference-path DIR]
+                              [--strict-references] [--check-access-not-granted]
+                              [--deny-actions A,B] [--deny-resources ARN,ARN]
+                              [--check-no-public-access RESOURCE_TYPE]
 
 options:
   -h, --help            Show help message and exit
@@ -112,8 +129,16 @@ options:
   --config FILE         Path to configuration file (YAML or TOML)
   -d, --policies-path PATH
                         Directory containing policy JSON files
+  -t, --policy-type {identity,resource,scp,rcp}
+                        Type of the policies (default: identity)
+  --resource-type TYPE  Resource type for resource policies (s3-bucket, trust-policy, ...)
+  --locale LOCALE       Language of finding messages (default: EN)
+  --max-findings N      Collect at most N findings per policy (default: all)
+  -r, --recursive       Also validate *.json files in sub-directories
+  --continue-on-error   Validate everything, report, then exit 1 on any ERROR
+  --fail-on LEVEL       error, security-warning, warning, suggestion or none
   -p, --profile NAME    AWS CLI profile name
-  -f, --format {json,text,html,md,markdown,all}
+  -f, --format {json,text,html,md,markdown,xml,junit,sarif,all}
                         Output format (default: json)
   -o, --output FILE     Output file path
   -z, --zip             Create ZIP archive of reports
@@ -125,14 +150,24 @@ options:
   --quiet               Suppress non-essential output
   --log-format {text,json}
                         Log output format
+
+custom policy checks (identity and resource policies, billed per call):
+  --check-no-new-access       Fail if a policy grants more than its baseline
+  --reference-path DIR        Baseline policies (same file names)
+  --strict-references         Missing baseline file counts as a failure
+  --check-access-not-granted  Fail if --deny-actions/--deny-resources are granted
+  --deny-actions A,B          Actions that must not be granted
+  --deny-resources ARN,ARN    Resources that must not be accessible
+  --check-no-public-access RESOURCE_TYPE
+                              Fail if a resource policy can be public
 ```
 
 ## Exit Codes
 
 - `0` - Success
-- `1` - Validation error (policy has ERROR-level findings)
-- `2` - Configuration error
-- `3` - AWS API error
+- `1` - Validation error (ERROR-level finding, a failed custom check, or a finding at or above `--fail-on`)
+- `2` - Configuration error (including a boto3 version that lacks a requested feature)
+- `3` - AWS API error (permissions, throttling after retries, service errors)
 - `4` - File I/O error
 
 ## Policy File Format

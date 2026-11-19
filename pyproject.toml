@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "validate_aws_policies"
-version = "3.1.1"
+version = "3.2.0"
 authors = [
     { name = "Alejandro Velez", email = "avelez@labvel.io" },
 ]
@@ -114,6 +114,7 @@ ignore = []
 
 [tool.ruff.lint.per-file-ignores]
 "__init__.py" = ["F401"]  # Allow unused imports in __init__
+"src/validate_aws_policies/ops/html_report.py" = ["E501"]  # embedded CSS/JS/HTML template
 
 
 

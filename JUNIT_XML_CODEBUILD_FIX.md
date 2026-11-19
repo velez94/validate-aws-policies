@@ -60,14 +60,14 @@ Fixed the JUnit XML report generation in `src/validate_aws_policies/ops/reports.
 
 ## Testing
 
-A validation script `test_junit_xml_output.py` has been created to verify XML compatibility:
+A validation script `scripts/validate_junit_xml.py` has been created to verify XML compatibility:
 
 ```bash
 # Run policy validation
 python -m validate_aws_policies --format xml --directory-policies-path ./policies
 
 # Validate the generated XML
-python3 test_junit_xml_output.py AccessAnalyzerReport_*.xml
+python3 scripts/validate_junit_xml.py AccessAnalyzerReport_*.xml
 ```
 
 The validation script checks:

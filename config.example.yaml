@@ -1,6 +1,8 @@
 # Example configuration file for validate-aws-policies
 # Copy this file to config.yaml and customize as needed
 
+# Legacy key names (directory_policies_path, upload_report, zip_reports) are still accepted.
+
 # AWS profile to use for Access Analyzer API
 profile: my-aws-profile
 
@@ -8,16 +10,48 @@ profile: my-aws-profile
 bucket_name: my-reports-bucket
 
 # Directory containing policy files (JSON format)
-directory_policies_path: ./policies
+policies_path: ./policies
+
+# Policy type: identity (default), resource, scp or rcp
+policy_type: identity
 
 # Enable report upload to S3
-upload_report: false
+upload: false
 
 # Create ZIP archive of reports
-zip_reports: false
+zip: false
 
 # CI/CD mode
 ci: false
 
 # Logging level (DEBUG, INFO, WARNING, ERROR)
 log_level: INFO
+
+# Also search sub-directories
+recursive: false
+
+# Language of finding messages (DE EN ES FR IT JA KO PT_BR ZH_CN ZH_TW)
+locale: EN
+
+# Failure handling: stop at the first ERROR (default), or validate everything and
+# exit 1 at the end. fail_on implies continue_on_error.
+continue_on_error: false
+# fail_on: error    # error, security-warning, warning, suggestion, none
+
+# Custom policy checks (identity and resource policies, billed per API call)
+# checks:
+#   no_new_access:
+#     reference_path: ./baseline
+#     strict: false
+#   access_not_granted:
+#     actions: ["iam:*"]
+#   no_public_access:
+#     resource_type: s3-bucket
+
+# Validate several policy types in one run
+# policy_sets:
+#   - path: ./scps
+#     policy_type: scp
+#   - path: ./bucket-policies
+#     policy_type: resource
+#     resource_type: s3-bucket

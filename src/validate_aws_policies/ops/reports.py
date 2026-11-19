@@ -1,12 +1,15 @@
 """Report generation module for AWS policy validation results."""
 
+import json
 import logging
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 from zipfile import ZipFile
 
-from json2html import json2html
+from .findings import finding_message, real_findings
+from .html_report import render_html
+from .sarif import build_sarif
 
 logger = logging.getLogger(__name__)
 
@@ -14,12 +17,16 @@ logger = logging.getLogger(__name__)
 class ReportGenerator:
     """Generate validation reports in various formats."""
 
-    def create_html_report(self, results: List[Dict[str, Any]]) -> Path:
+    def create_html_report(
+        self, results: List[Dict[str, Any]], metadata: Optional[Dict[str, Any]] = None
+    ) -> Path:
         """
-        Create modern, responsive HTML report from validation results.
+        Create a self-contained HTML report (light/dark theme, filters, search).
 
         Args:
             results: List of validation results containing policy findings
+            metadata: Optional run description shown in the report header
+                (``tool_version``, ``policy_sets``, ``locale``, ``checks``)
 
         Returns:
             Path to the created HTML report file
@@ -31,375 +38,11 @@ class ReportGenerator:
         file_name = Path(f"AccessAnalyzerReport_{timestamp.strftime('%Y%m%d_%H%M%S')}.html")
 
         logger.info("Creating HTML report...")
-
-        # Calculate summary statistics
-        total_policies = len(results)
-        total_findings = sum(len(r.get("summary", [])) for r in results)
-        findings_by_type = {"ERROR": 0, "WARNING": 0, "SUGGESTION": 0, "SECURITY_WARNING": 0}
-        
-        for result in results:
-            for finding in result.get("summary", []):
-                finding_type = finding.get("findingType", "")
-                if finding_type in findings_by_type:
-                    findings_by_type[finding_type] += 1
-
-        html_content = f"""<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="generator" content="AWS Policy Validator">
-    <title>AWS Policy Validation Report</title>
-    <style>
-
-        :root {{
-            --primary-color: #232f3e;
-            --secondary-color: #ff9900;
-            --error-color: #d13212;
-            --warning-color: #ff9900;
-            --suggestion-color: #1e8900;
-            --security-warning-color: #ec7211;
-            --bg-color: #f8f9fa;
-            --card-bg: #ffffff;
-            --text-primary: #16191f;
-            --text-secondary: #545b64;
-            --border-color: #d5dbdb;
-            --shadow: 0 2px 4px rgba(0,0,0,0.1);
-            --shadow-hover: 0 4px 8px rgba(0,0,0,0.15);
-        }}
-
-        * {{
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }}
-
-        body {{
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-                'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
-            background-color: var(--bg-color);
-            color: var(--text-primary);
-            line-height: 1.6;
-            padding: 20px;
-        }}
-
-        .container {{
-            max-width: 1400px;
-            margin: 0 auto;
-        }}
-
-        header {{
-            background: linear-gradient(135deg, var(--primary-color) 0%, #37475a 100%);
-            color: white;
-            padding: 40px;
-            border-radius: 12px;
-            margin-bottom: 30px;
-            box-shadow: var(--shadow);
-        }}
-
-        h1 {{
-            font-size: 2.5rem;
-            font-weight: 700;
-            margin-bottom: 10px;
-        }}
-
-        .subtitle {{
-            font-size: 1.1rem;
-            opacity: 0.9;
-            font-weight: 300;
-        }}
-
-        .summary-cards {{
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 20px;
-            margin-bottom: 30px;
-        }}
-
-        .summary-card {{
-            background: var(--card-bg);
-            padding: 25px;
-            border-radius: 8px;
-            box-shadow: var(--shadow);
-            transition: transform 0.2s, box-shadow 0.2s;
-        }}
-
-        .summary-card:hover {{
-            transform: translateY(-2px);
-            box-shadow: var(--shadow-hover);
-        }}
-
-        .summary-card .number {{
-            font-size: 2.5rem;
-            font-weight: 700;
-            margin-bottom: 5px;
-        }}
-
-        .summary-card .label {{
-            color: var(--text-secondary);
-            font-size: 0.9rem;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }}
-
-        .summary-card.error .number {{ color: var(--error-color); }}
-        .summary-card.warning .number {{ color: var(--warning-color); }}
-        .summary-card.suggestion .number {{ color: var(--suggestion-color); }}
-        .summary-card.security .number {{ color: var(--security-warning-color); }}
-
-        .report-section {{
-            background: var(--card-bg);
-            padding: 30px;
-            border-radius: 8px;
-            box-shadow: var(--shadow);
-            margin-bottom: 20px;
-        }}
-
-        h2 {{
-            font-size: 1.8rem;
-            margin-bottom: 20px;
-            color: var(--primary-color);
-            border-bottom: 3px solid var(--secondary-color);
-            padding-bottom: 10px;
-        }}
-
-        .policy-item {{
-            margin-bottom: 30px;
-            padding: 20px;
-            background: var(--bg-color);
-            border-radius: 6px;
-            border-left: 4px solid var(--primary-color);
-        }}
-
-        .policy-name {{
-            font-size: 1.3rem;
-            font-weight: 600;
-            color: var(--primary-color);
-            margin-bottom: 15px;
-        }}
-
-        .findings-table {{
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 15px;
-            overflow-x: auto;
-            display: block;
-        }}
-
-        .findings-table thead {{
-            background: var(--primary-color);
-            color: white;
-        }}
-
-        .findings-table th,
-        .findings-table td {{
-            padding: 12px 15px;
-            text-align: left;
-            border-bottom: 1px solid var(--border-color);
-        }}
-
-        .findings-table th {{
-            font-weight: 600;
-            text-transform: uppercase;
-            font-size: 0.85rem;
-            letter-spacing: 0.5px;
-        }}
-
-        .findings-table tbody tr:hover {{
-            background-color: rgba(255, 153, 0, 0.05);
-        }}
-
-        .badge {{
-            display: inline-block;
-            padding: 4px 12px;
-            border-radius: 12px;
-            font-size: 0.85rem;
-            font-weight: 600;
-            text-transform: uppercase;
-        }}
-
-        .badge.error {{
-            background-color: rgba(209, 50, 18, 0.1);
-            color: var(--error-color);
-        }}
-
-        .badge.warning {{
-            background-color: rgba(255, 153, 0, 0.1);
-            color: var(--warning-color);
-        }}
-
-        .badge.suggestion {{
-            background-color: rgba(30, 137, 0, 0.1);
-            color: var(--suggestion-color);
-        }}
-
-        .badge.security {{
-            background-color: rgba(236, 114, 17, 0.1);
-            color: var(--security-warning-color);
-        }}
-
-        .no-findings {{
-            color: var(--suggestion-color);
-            font-weight: 500;
-            padding: 15px;
-            background: rgba(30, 137, 0, 0.05);
-            border-radius: 4px;
-            text-align: center;
-        }}
-
-        footer {{
-            margin-top: 40px;
-            padding: 20px;
-            text-align: center;
-            color: var(--text-secondary);
-            font-size: 0.9rem;
-            border-top: 1px solid var(--border-color);
-        }}
-
-        .timestamp {{
-            font-weight: 600;
-            color: var(--text-primary);
-        }}
-
-        @media (max-width: 768px) {{
-            h1 {{
-                font-size: 1.8rem;
-            }}
-
-            .summary-cards {{
-                grid-template-columns: repeat(2, 1fr);
-            }}
-
-            .findings-table {{
-                font-size: 0.85rem;
-            }}
-
-            .findings-table th,
-            .findings-table td {{
-                padding: 8px 10px;
-            }}
-        }}
-
-        @media (max-width: 480px) {{
-            body {{
-                padding: 10px;
-            }}
-
-            header {{
-                padding: 20px;
-            }}
-
-            .summary-cards {{
-                grid-template-columns: 1fr;
-            }}
-        }}
-    </style>
-</head>
-<body>
-    <div class="container">
-        <header>
-            <h1>AWS Policy Validation Report</h1>
-            <p class="subtitle">IAM Access Analyzer Policy Validation Results</p>
-        </header>
-
-        <div class="summary-cards">
-            <div class="summary-card">
-                <div class="number">{total_policies}</div>
-                <div class="label">Total Policies</div>
-            </div>
-            <div class="summary-card">
-                <div class="number">{total_findings}</div>
-                <div class="label">Total Findings</div>
-            </div>
-            <div class="summary-card error">
-                <div class="number">{findings_by_type['ERROR']}</div>
-                <div class="label">Errors</div>
-            </div>
-            <div class="summary-card warning">
-                <div class="number">{findings_by_type['WARNING']}</div>
-                <div class="label">Warnings</div>
-            </div>
-            <div class="summary-card security">
-                <div class="number">{findings_by_type['SECURITY_WARNING']}</div>
-                <div class="label">Security Warnings</div>
-            </div>
-            <div class="summary-card suggestion">
-                <div class="number">{findings_by_type['SUGGESTION']}</div>
-                <div class="label">Suggestions</div>
-            </div>
-        </div>
-
-        <div class="report-section">
-            <h2>Policy Validation Details</h2>
-"""
-
-        # Add policy details
-        for result in results:
-            policy_name = result.get("filePolicy", "Unknown Policy")
-            summary = result.get("summary", [])
-            
-            html_content += f"""
-            <div class="policy-item">
-                <div class="policy-name">📄 {policy_name}</div>
-"""
-            
-            if not summary:
-                html_content += """
-                <div class="no-findings">✓ No findings - Policy is valid</div>
-"""
-            else:
-                html_content += """
-                <table class="findings-table">
-                    <thead>
-                        <tr>
-                            <th>Finding Type</th>
-                            <th>Issue Code</th>
-                            <th>Details</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-"""
-                for finding in summary:
-                    finding_type = finding.get("findingType", "UNKNOWN")
-                    issue_code = finding.get("issueCode", "N/A")
-                    details = finding.get("findingDetails", "No details available")
-                    
-                    badge_class = finding_type.lower().replace("_", "-")
-                    if badge_class not in ["error", "warning", "suggestion", "security-warning"]:
-                        badge_class = "warning"
-                    
-                    html_content += f"""
-                        <tr>
-                            <td><span class="badge {badge_class}">{finding_type}</span></td>
-                            <td>{issue_code}</td>
-                            <td>{details}</td>
-                        </tr>
-"""
-                
-                html_content += """
-                    </tbody>
-                </table>
-"""
-            
-            html_content += """
-            </div>
-"""
-
-        html_content += f"""
-        </div>
-
-        <footer>
-            <p>Generated on <span class="timestamp">{timestamp.strftime('%Y-%m-%d %H:%M:%S')}</span></p>
-            <p>AWS Policy Validator | IAM Access Analyzer</p>
-        </footer>
-    </div>
-</body>
-</html>
-"""
+        document = render_html(results, generated_at=timestamp, metadata=metadata)
 
         try:
             with file_name.open("w", encoding="utf-8") as f:
-                f.write(html_content)
+                f.write(document)
 
             logger.info(f"Created HTML report: {file_name}")
             return file_name
@@ -408,6 +51,35 @@ class ReportGenerator:
             logger.error(f"Failed to create HTML report: {e}")
             raise
 
+    def create_sarif_report(
+        self, results: List[Dict[str, Any]], base_dir: Optional[str] = None
+    ) -> Path:
+        """
+        Create a SARIF 2.1.0 report for code scanning tools.
+
+        Args:
+            results: List of validation results containing policy findings
+            base_dir: Directory the policy files were read from (used for file URIs)
+
+        Returns:
+            Path to the created SARIF file
+
+        Raises:
+            IOError: If unable to write the file
+        """
+        timestamp = datetime.now()
+        file_name = Path(f"AccessAnalyzerReport_{timestamp.strftime('%Y%m%d_%H%M%S')}.sarif")
+
+        logger.info("Creating SARIF report...")
+        try:
+            with file_name.open("w", encoding="utf-8") as f:
+                json.dump(build_sarif(results, base_dir), f, indent=2)
+                f.write("\n")
+            logger.info(f"Created SARIF report: {file_name}")
+            return file_name
+        except OSError as e:
+            logger.error(f"Failed to create SARIF report: {e}")
+            raise
 
     def create_markdown_report(self, results: List[Dict[str, Any]]) -> Path:
         """
@@ -429,11 +101,11 @@ class ReportGenerator:
 
         # Calculate summary statistics
         total_policies = len(results)
-        total_findings = sum(len(r.get("summary", [])) for r in results)
+        total_findings = sum(len(real_findings(r)) for r in results)
         findings_by_type = {"ERROR": 0, "WARNING": 0, "SUGGESTION": 0, "SECURITY_WARNING": 0}
-        
+
         for result in results:
-            for finding in result.get("summary", []):
+            for finding in real_findings(result):
                 finding_type = finding.get("findingType", "")
                 if finding_type in findings_by_type:
                     findings_by_type[finding_type] += 1
@@ -466,29 +138,30 @@ Generated: {timestamp.strftime('%Y-%m-%d %H:%M:%S')}
         # Generate table of contents
         for idx, result in enumerate(results, 1):
             policy_name = result.get("filePolicy", "Unknown Policy")
-            md_content += f"{idx}. [{policy_name}](#{policy_name.replace(' ', '-').replace('.', '').lower()})\n"
+            anchor = policy_name.replace(" ", "-").replace(".", "").lower()
+            md_content += f"{idx}. [{policy_name}](#{anchor})\n"
 
         md_content += "\n---\n\n## Policy Validation Details\n\n"
 
         # Add policy details
         for result in results:
             policy_name = result.get("filePolicy", "Unknown Policy")
-            summary = result.get("summary", [])
-            
+            summary = real_findings(result)
+
             md_content += f"### {policy_name}\n\n"
-            
+
             if not summary:
                 md_content += "✅ **No findings** - Policy is valid\n\n"
             else:
                 md_content += f"**Findings:** {len(summary)}\n\n"
                 md_content += "| Finding Type | Issue Code | Details |\n"
                 md_content += "|--------------|------------|----------|\n"
-                
+
                 for finding in summary:
                     finding_type = finding.get("findingType", "UNKNOWN")
                     issue_code = finding.get("issueCode", "N/A")
-                    details = finding.get("findingDetails", "No details available")
-                    
+                    details = finding_message(finding)
+
                     # Add emoji indicators
                     emoji = {
                         "ERROR": "🔴",
@@ -496,14 +169,14 @@ Generated: {timestamp.strftime('%Y-%m-%d %H:%M:%S')}
                         "SECURITY_WARNING": "🟠",
                         "SUGGESTION": "🟢"
                     }.get(finding_type, "⚪")
-                    
+
                     # Escape pipe characters in details
                     details = details.replace("|", "\\|")
-                    
+
                     md_content += f"| {emoji} {finding_type} | `{issue_code}` | {details} |\n"
-                
+
                 md_content += "\n"
-            
+
             md_content += "---\n\n"
 
         md_content += f"""

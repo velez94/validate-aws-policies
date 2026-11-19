@@ -13,6 +13,13 @@ Create `config.yaml`:
 profile: my-aws-profile
 policies_path: ./policies
 
+# Policy options
+policy_type: identity          # identity, resource, scp or rcp
+# resource_type: s3-bucket     # only with policy_type: resource
+# locale: EN
+# recursive: false
+# max_findings: 100
+
 # Output Configuration
 format: html
 output: report.html
@@ -20,7 +27,19 @@ output: report.html
 # Report Options
 zip: true
 upload: false
-bucket: my-reports-bucket
+bucket_name: my-reports-bucket   # "bucket" is accepted as an alias
+
+# Failure handling
+# continue_on_error: false
+# fail_on: error               # error, security-warning, warning, suggestion, none
+
+# Custom policy checks (see "Policy Types & Custom Checks")
+# checks:
+#   no_new_access: {reference_path: ./baseline, strict: false}
+#   access_not_granted: {actions: ["iam:*"], resources: []}
+#   no_public_access: {resource_type: s3-bucket}
+# policy_sets:
+#   - {path: ./scps, policy_type: scp}
 
 # Execution Options
 dry_run: false
@@ -79,6 +98,12 @@ Configuration is merged in this order (later overrides earlier):
 1. Configuration file
 2. Environment variables
 3. Command-line arguments
+
+Key names: the config file uses the same names as the options (`policies_path`, `upload`,
+`zip`, `bucket_name`). The older names `directory_policies_path`, `upload_report`,
+`zip_reports` and `bucket` are still accepted and mean the same thing. Value options such
+as `format`, `log_format`, `policy_type` and `fail_on` in the file are used when the
+command line does not set them.
 
 ## Environment Variables
 

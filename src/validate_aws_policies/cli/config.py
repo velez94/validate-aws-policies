@@ -45,6 +45,16 @@ class ConfigLoader:
         "LOG_LEVEL": "log_level",
     }
 
+    # Legacy config keys and their canonical names (same names as the CLI options).
+    # Both spellings are kept in the loaded config and stay in sync, so existing
+    # config files and callers that read the legacy keys keep working.
+    KEY_ALIASES = {
+        "directory_policies_path": "policies_path",
+        "upload_report": "upload",
+        "zip_reports": "zip",
+        "bucket": "bucket_name",
+    }
+
     def __init__(self, config_file: Optional[Union[str, Path]] = None):
         """Initialize ConfigLoader.
 
@@ -69,19 +79,42 @@ class ConfigLoader:
             ConfigError: If config file is specified but cannot be loaded
         """
         # Start with defaults
-        self._config = self._load_defaults()
+        self._config = self._sync_aliases(self._load_defaults())
 
         # Override with config file if provided
         if self.config_file:
             file_config = self._load_file()
-            self._config.update(file_config)
+            self._config.update(self._sync_aliases(file_config))
 
         # Override with environment variables
         env_config = self._load_env_vars()
-        self._config.update(env_config)
+        self._config.update(self._sync_aliases(env_config))
 
         logger.debug(f"Loaded configuration: {self._config}")
         return self._config
+
+    @classmethod
+    def _sync_aliases(cls, layer: Dict[str, Any]) -> Dict[str, Any]:
+        """Make legacy and canonical keys of one config layer agree.
+
+        If a layer sets only one spelling, the other spelling is filled in with
+        the same value. If it sets both, each is left as written. Doing this per
+        layer keeps precedence correct (e.g. an env var beats a file value
+        whichever spelling the file used).
+
+        Args:
+            layer: Configuration values from a single source
+
+        Returns:
+            Copy of the layer with both spellings present
+        """
+        synced = dict(layer)
+        for legacy, canonical in cls.KEY_ALIASES.items():
+            if legacy in synced and canonical not in synced:
+                synced[canonical] = synced[legacy]
+            elif canonical in synced and legacy not in synced:
+                synced[legacy] = synced[canonical]
+        return synced
 
     def _load_defaults(self) -> Dict[str, Any]:
         """Load default configuration values.

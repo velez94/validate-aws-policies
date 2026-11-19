@@ -111,7 +111,7 @@ if __name__ == "__main__":
     print("\nThis script validates JUnit XML files for AWS CodeBuild compatibility.")
     print("\nTo test:")
     print("1. Run your policy validation with --format xml")
-    print("2. Run: python3 test_junit_xml_output.py <xml_file>")
+    print("2. Run: python3 scripts/validate_junit_xml.py <xml_file>")
     print("\nRequired elements:")
     print("  - testsuites: name, tests, failures, errors, skipped, time, timestamp")
     print("  - testsuite: name, tests, failures, errors, skipped, time, timestamp")

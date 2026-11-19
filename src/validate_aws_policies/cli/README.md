@@ -103,9 +103,16 @@ log_level = "INFO"
 |--------|------|---------|-------------|
 | `profile` | str | None | AWS profile name |
 | `bucket_name` | str | None | S3 bucket for reports |
-| `directory_policies_path` | str | "./policies" | Policy files directory |
-| `upload_report` | bool | False | Upload reports to S3 |
-| `zip_reports` | bool | False | Create ZIP archive |
+| `policies_path` | str | "./policies" | Policy files directory (legacy: `directory_policies_path`) |
+| `policy_type` | str | "identity" | `identity`, `resource`, `scp` or `rcp` |
+| `resource_type` | str | - | Resource policies only: `s3-bucket`, `trust-policy`, ... |
+| `locale` | str | "EN" | Language of finding messages |
+| `recursive` | bool | False | Search sub-directories |
+| `continue_on_error` | bool | False | Report all findings, exit 1 at the end |
+| `fail_on` | str | - | `error`, `security-warning`, `warning`, `suggestion`, `none` |
+| `checks` / `policy_sets` | map / list | - | See `docs/access-analyzer-features.md` |
+| `upload` | bool | False | Upload reports to S3 (legacy: `upload_report`) |
+| `zip` | bool | False | Create ZIP archive (legacy: `zip_reports`) |
 | `ci` | bool | False | CI/CD mode |
 | `log_level` | str | "INFO" | Logging level |
 
