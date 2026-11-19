@@ -2,9 +2,10 @@
 
 import json
 import logging
+import os
 import shutil
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 from botocore.exceptions import BotoCoreError, ClientError
 
@@ -17,10 +18,11 @@ from ..cli.exit_codes import (
 )
 from ..iam_access_analyzer.checks import checks_requested, run_policy_checks
 from ..iam_access_analyzer.features import SdkFeatureError
-from ..iam_access_analyzer.iam_access_analyzer import validate_policies
+from ..iam_access_analyzer.iam_access_analyzer import validate_policies, validate_policy_documents
 from ..ops.findings import exceeds_threshold, finding_link, finding_spans
 from ..ops.ops import upload_file
 from ..ops.reports import ReportGenerator
+from ..sources import ExtractOptions, PolicyDocument, SkippedPolicy, SourceError, extract
 from ..version import __version__
 
 logger = logging.getLogger(__name__)
@@ -57,6 +59,8 @@ class PolicyValidator:
         self.report_generator = ReportGenerator()
         self._base_dir: Optional[str] = None
         self._targets_info: List[Dict[str, Any]] = []
+        self._skipped: List[SkippedPolicy] = []
+        self._iac_inputs: List[Dict[str, Any]] = []
 
     def run(self) -> int:
         """
@@ -81,6 +85,9 @@ class PolicyValidator:
             - EXIT_FILE_ERROR (4): File operation error
         """
         try:
+            if self.config.get("input"):
+                return self._run_iac()
+
             targets = self._targets()
             results: List[Dict[str, Any]] = []
 
@@ -132,29 +139,9 @@ class PolicyValidator:
 
             self._base_dir = str(targets[0]["path"]) if len(targets) == 1 else None
             self._targets_info = targets
+            return self._finish(results)
 
-            # Output results
-            self._output_results(results)
-
-            # Generate reports (unless dry-run)
-            if not self.config.get("dry_run", False):
-                report_files = self._generate_reports(results)
-
-                # Upload reports if requested
-                if self.config.get("upload_report", False) or self.config.get("upload", False):
-                    self._upload_reports(report_files)
-            else:
-                logger.info("Dry-run mode: Skipping report generation and uploads")
-
-            # Custom check failures (and, with --continue-on-error/--fail-on, validation
-            # findings) decide the exit code only after everything has been written.
-            if exceeds_threshold(results, self.config.get("fail_on") or "error"):
-                logger.error("Findings at or above the failure threshold were found")
-                return EXIT_VALIDATION_ERROR
-
-            return EXIT_SUCCESS
-
-        except SdkFeatureError as e:
+        except (SdkFeatureError, SourceError) as e:
             logger.error(str(e))
             return EXIT_CONFIG_ERROR
         except (ClientError, BotoCoreError, UploadError) as e:
@@ -171,6 +158,118 @@ class PolicyValidator:
             # Catch any other unexpected errors
             logger.exception(f"Unexpected error during validation: {e}")
             return EXIT_VALIDATION_ERROR
+
+    def _finish(self, results: List[Dict[str, Any]]) -> int:
+        """Write the output and reports, upload them, and decide the exit code."""
+        # Output results
+        self._output_results(results)
+
+        # Generate reports (unless dry-run)
+        if not self.config.get("dry_run", False):
+            report_files = self._generate_reports(results)
+
+            # Upload reports if requested
+            if self.config.get("upload_report", False) or self.config.get("upload", False):
+                self._upload_reports(report_files)
+        else:
+            logger.info("Dry-run mode: Skipping report generation and uploads")
+
+        # Custom check failures (and, with --continue-on-error/--fail-on, validation
+        # findings) decide the exit code only after everything has been written.
+        failed = False
+        if exceeds_threshold(results, self.config.get("fail_on") or "error"):
+            logger.error("Findings at or above the failure threshold were found")
+            failed = True
+        if self._unknown_values_fail():
+            failed = True
+        return EXIT_VALIDATION_ERROR if failed else EXIT_SUCCESS
+
+    def _unknown_values_fail(self) -> bool:
+        """True when --unknown-values fail is set and some policies were skipped."""
+        if self.config.get("unknown_values") == "fail" and self._skipped:
+            logger.error(
+                f"{len(self._skipped)} policies could not be validated because their value "
+                "is not known before deployment (--unknown-values fail)"
+            )
+            return True
+        return False
+
+    @staticmethod
+    def _region() -> str:
+        return os.environ.get("AWS_REGION") or os.environ.get("AWS_DEFAULT_REGION") or "us-east-1"
+
+    def _run_iac(self) -> int:
+        """Validate the policies found in Terraform, CloudFormation or Pulumi inputs."""
+        options = ExtractOptions(
+            only_changed=bool(self.config.get("only_changed")),
+            params=dict(self.config.get("params") or {}),
+            region=self._region(),
+        )
+        source = self.config.get("source")
+        recursive = bool(self.config.get("recursive"))
+
+        extraction = extract(self.config["input"], source, options, recursive=recursive)
+        self._skipped = extraction.skipped
+
+        references: Optional[Dict[str, str]] = None
+        if self.config.get("reference_input"):
+            baseline = extract(self.config["reference_input"], source, options, recursive=recursive)
+            references = {doc.id: doc.text for doc in baseline.documents}
+
+        counts: Dict[str, int] = {}
+        kinds: Dict[str, str] = {}
+        for doc in extraction.documents:
+            counts[doc.file] = counts.get(doc.file, 0) + 1
+            kinds[doc.file] = doc.source_type
+        self._iac_inputs = [
+            {"file": file, "type": kinds[file], "policies": count} for file, count in counts.items()
+        ]
+
+        if not extraction.documents:
+            logger.warning("No policies found in the input")
+            return EXIT_VALIDATION_ERROR if self._unknown_values_fail() else EXIT_SUCCESS
+
+        groups: Dict[Tuple[str, Optional[str]], List[PolicyDocument]] = {}
+        for doc in extraction.documents:
+            groups.setdefault((doc.policy_type, doc.resource_type), []).append(doc)
+
+        results: List[Dict[str, Any]] = []
+        for (policy_type, resource_type), docs in groups.items():
+            kind = f"{policy_type}/{resource_type}" if resource_type else policy_type
+            logger.info(f"Validating {len(docs)} {kind} policies...")
+            group_results = validate_policy_documents(
+                [(doc.id, doc.text) for doc in docs],
+                policy_type=policy_type,
+                resource_type=resource_type,
+                locale=self.config.get("locale") or "EN",
+                max_findings=self.config.get("max_findings"),
+                fail_fast=not self._continue_on_error(),
+            )
+            by_id = {doc.id: doc for doc in docs}
+            for entry in group_results:
+                doc = by_id[entry["filePolicy"]]
+                entry["source"] = {
+                    "type": doc.source_type,
+                    "file": doc.file,
+                    "resourceType": doc.iac_type,
+                }
+
+            if checks_requested(self.config):
+                run_policy_checks(
+                    group_results,
+                    None,
+                    policy_type,
+                    self.config,
+                    resource_type=resource_type,
+                    documents={doc.id: doc.text for doc in docs},
+                    reference_documents=references,
+                    strict_resource_type=True,
+                )
+            results.extend(group_results)
+
+        self._base_dir = None
+        self._targets_info = []
+        return self._finish(results)
 
     def _continue_on_error(self) -> bool:
         """True when ERROR findings must not abort the run (opt-in, legacy default is abort)."""
@@ -296,6 +395,11 @@ class PolicyValidator:
 
             lines.append("")
 
+        if self._skipped:
+            lines.append("Skipped (value not known before deployment):")
+            lines.extend(f"  - {item.id}: {item.reason}" for item in self._skipped)
+            lines.append("")
+
         return "\n".join(lines)
 
     def _generate_reports(self, results: List[Dict[str, Any]]) -> List[Path]:
@@ -366,6 +470,8 @@ class PolicyValidator:
         if self.config.get("check_no_public_access"):
             checks.append("CheckNoPublicAccess")
         return {
+            "inputs": self._iac_inputs,
+            "skipped": [{"id": item.id, "reason": item.reason} for item in self._skipped],
             "tool_version": __version__,
             "policy_sets": [
                 {"path": str(t["path"]), "policy_type": str(t["policy_type"])}

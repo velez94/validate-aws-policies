@@ -47,7 +47,10 @@ def read_policies(file_path: Path) -> Optional[str]:
 
 
 def validate_findings(
-    policy: str, findings: List[Dict[str, Any]], fail_fast: bool = True
+    policy: str,
+    findings: List[Dict[str, Any]],
+    fail_fast: bool = True,
+    policy_name: Optional[str] = None,
 ) -> Dict[str, Any]:
     """
     Validate findings for a policy and return a summary of the findings.
@@ -55,6 +58,8 @@ def validate_findings(
     Args:
         policy: Policy file name
         findings: List of findings for the policy
+        policy_name: Name shown in the summary entries (default: the file name without
+            extension). IaC policies pass their resource address.
         fail_fast: Raise ``ValueError`` on the first ERROR finding (default, legacy
             behavior). When False, ERROR findings are recorded like any other finding
             so the whole run can finish and be reported.
@@ -65,7 +70,7 @@ def validate_findings(
     Raises:
         ValueError: If ERROR-level finding is detected and ``fail_fast`` is True
     """
-    policy_name = Path(policy).stem
+    policy_name = policy_name or Path(policy).stem
     summary: Dict[str, Any] = {"filePolicy": policy, "summary": []}
 
     if len(findings) == 0:

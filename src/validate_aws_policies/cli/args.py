@@ -10,7 +10,7 @@ This module provides argument parsing with:
 
 import argparse
 from pathlib import Path
-from typing import List, Optional
+from typing import List, Optional, Tuple
 
 from ..iam_access_analyzer.constants import FAIL_ON_LEVELS, LOCALES, RESOURCE_TYPES
 
@@ -25,6 +25,14 @@ except ImportError:
 def _csv(value: str) -> List[str]:
     """Split a comma separated argument into a list of non-empty items."""
     return [item.strip() for item in value.split(",") if item.strip()]
+
+
+def _key_value(value: str) -> Tuple[str, str]:
+    """Parse ``KEY=VALUE`` for ``--param``."""
+    if "=" not in value or value.startswith("="):
+        raise argparse.ArgumentTypeError(f"expected KEY=VALUE, got '{value}'")
+    key, _, text = value.partition("=")
+    return key.strip(), text
 
 
 class ArgumentValidationError(Exception):
@@ -202,6 +210,57 @@ Examples:
         "Use with --policy-type resource",
     )
 
+    # Infrastructure as code inputs
+    iac = parser.add_argument_group(
+        "infrastructure as code inputs",
+        "Validate the policies of a Terraform/OpenTofu plan, CloudFormation or CDK template, "
+        "or Pulumi preview/export instead of policy files. The policy types are decided by "
+        "the resource types, so --policy-type and --resource-type are not used.",
+    )
+    iac.add_argument(
+        "-i",
+        "--input",
+        nargs="+",
+        default=None,
+        metavar="PATH",
+        help="Plan JSON (terraform show -json), template, Pulumi JSON, or a directory of "
+        "templates. Replaces --policies-path",
+    )
+    iac.add_argument(
+        "--source",
+        choices=["auto", "terraform-plan", "cloudformation", "pulumi"],
+        default=None,
+        help="Format of --input (default: auto, detected from the content)",
+    )
+    iac.add_argument(
+        "--reference-input",
+        nargs="+",
+        default=None,
+        metavar="PATH",
+        help="Baseline plan/template (for example from the main branch) for "
+        "--check-no-new-access. Policies are matched by id",
+    )
+    iac.add_argument(
+        "--param",
+        action="append",
+        type=_key_value,
+        default=None,
+        metavar="KEY=VALUE",
+        help="CloudFormation parameter value (repeatable)",
+    )
+    iac.add_argument(
+        "--unknown-values",
+        choices=["skip", "fail"],
+        default=None,
+        help="Policies whose value is not known before deployment: skip them with a "
+        "warning (default) or exit with code 1 after validating the rest",
+    )
+    iac.add_argument(
+        "--only-changed",
+        action="store_true",
+        help="Terraform and Pulumi: only policies of resources that are created or updated",
+    )
+
     # AWS configuration
     parser.add_argument(
         "-p",
@@ -309,9 +368,13 @@ def validate_args(args: argparse.Namespace) -> None:
     if args.bucket and not args.upload:
         errors.append("--bucket can only be used with --upload")
 
-    # Validate policies-path is required unless --version or --config is provided
-    if not args.version and not args.config and not args.policies_path:
-        errors.append("--policies-path is required (or use --config to specify it)")
+    input_paths = getattr(args, "input", None)
+    if input_paths and args.policies_path:
+        errors.append("--input cannot be combined with --policies-path")
+
+    # Validate policies-path is required unless --version, --config or --input is provided
+    if not args.version and not args.config and not args.policies_path and not input_paths:
+        errors.append("--policies-path is required (or use --input or --config)")
 
     # Validate policies-path exists if provided
     if args.policies_path:

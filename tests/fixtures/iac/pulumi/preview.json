@@ -1,0 +1,65 @@
+{
+  "steps": [
+    {
+      "op": "create",
+      "urn": "urn:pulumi:dev::demo::aws:iam/policy:Policy::deploy",
+      "provider": "urn:pulumi:dev::demo::pulumi:providers:aws::default::id",
+      "newState": {
+        "urn": "urn:pulumi:dev::demo::aws:iam/policy:Policy::deploy",
+        "custom": true,
+        "type": "aws:iam/policy:Policy",
+        "inputs": {
+          "policy": "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Effect\":\"Allow\",\"Action\":[\"s3:GetObject\"],\"Resource\":\"arn:aws:s3:::example-bucket/*\"}]}"
+        }
+      }
+    },
+    {
+      "op": "create",
+      "urn": "urn:pulumi:dev::demo::aws:s3/bucketPolicy:BucketPolicy::logs",
+      "newState": {
+        "urn": "urn:pulumi:dev::demo::aws:s3/bucketPolicy:BucketPolicy::logs",
+        "custom": true,
+        "type": "aws:s3/bucketPolicy:BucketPolicy",
+        "inputs": {
+          "policy": "04da6b54-80e4-46f7-96ec-b56ff0331ba9"
+        }
+      }
+    },
+    {
+      "op": "update",
+      "urn": "urn:pulumi:dev::demo::aws:iam/rolePolicy:RolePolicy::inline",
+      "newState": {
+        "urn": "urn:pulumi:dev::demo::aws:iam/rolePolicy:RolePolicy::inline",
+        "custom": true,
+        "type": "aws:iam/rolePolicy:RolePolicy",
+        "inputs": {
+          "policy": "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Effect\":\"Allow\",\"Action\":\"sqs:SendMessage\",\"Resource\":\"*\"}]}"
+        }
+      }
+    },
+    {
+      "op": "same",
+      "urn": "urn:pulumi:dev::demo::aws:iam/policy:Policy::unchanged",
+      "newState": {
+        "urn": "urn:pulumi:dev::demo::aws:iam/policy:Policy::unchanged",
+        "custom": true,
+        "type": "aws:iam/policy:Policy",
+        "inputs": {
+          "policy": "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Effect\":\"Allow\",\"Action\":\"s3:ListBucket\",\"Resource\":\"*\"}]}"
+        }
+      }
+    },
+    {
+      "op": "delete",
+      "urn": "urn:pulumi:dev::demo::aws:iam/policy:Policy::old",
+      "newState": {
+        "urn": "urn:pulumi:dev::demo::aws:iam/policy:Policy::old",
+        "custom": true,
+        "type": "aws:iam/policy:Policy",
+        "inputs": {"policy": "{\"Version\":\"2012-10-17\",\"Statement\":[]}"}
+      }
+    }
+  ],
+  "duration": 1234,
+  "changeSummary": {"create": 2, "update": 1, "same": 1, "delete": 1}
+}

@@ -269,6 +269,19 @@ class TestOtherChecks:
             )
         assert "checks" not in results[0]
 
+    def test_strict_resource_type_skips_groups_without_one(self, client, policies):
+        results = [clean_result()]
+        with Stubber(client):  # no API call expected
+            run_policy_checks(
+                results,
+                policies,
+                "resource",
+                {"check_no_public_access": "s3-bucket"},
+                client=client,
+                strict_resource_type=True,
+            )
+        assert "checks" not in results[0]
+
     def test_public_access_runs_for_sets_of_the_same_resource_type(self, client, policies):
         stub = Stubber(client)
         stub.add_response(

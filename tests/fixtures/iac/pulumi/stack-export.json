@@ -1,0 +1,103 @@
+{
+  "version": 3,
+  "deployment": {
+    "manifest": {"time": "2026-03-06T12:00:00Z", "magic": "x", "version": "v3.100.0"},
+    "resources": [
+      {
+        "urn": "urn:pulumi:dev::demo::pulumi:pulumi:Stack::demo-dev",
+        "custom": false,
+        "type": "pulumi:pulumi:Stack"
+      },
+      {
+        "urn": "urn:pulumi:dev::demo::pulumi:providers:aws::default",
+        "custom": true,
+        "id": "provider-id",
+        "type": "pulumi:providers:aws",
+        "inputs": {"region": "us-east-1"}
+      },
+      {
+        "urn": "urn:pulumi:dev::demo::aws:iam/policy:Policy::deploy",
+        "custom": true,
+        "id": "arn:aws:iam::123456789012:policy/deploy",
+        "type": "aws:iam/policy:Policy",
+        "inputs": {
+          "name": "deploy",
+          "policy": "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Effect\":\"Allow\",\"Action\":[\"s3:GetObject\"],\"Resource\":\"arn:aws:s3:::example-bucket/*\"}]}"
+        },
+        "outputs": {
+          "name": "deploy",
+          "policy": "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Effect\":\"Allow\",\"Action\":[\"s3:GetObject\"],\"Resource\":\"arn:aws:s3:::example-bucket/*\"}]}"
+        }
+      },
+      {
+        "urn": "urn:pulumi:dev::demo::aws:iam/policy:Policy::too-broad",
+        "custom": true,
+        "id": "arn:aws:iam::123456789012:policy/too-broad",
+        "type": "aws:iam/policy:Policy",
+        "inputs": {
+          "policy": {
+            "Version": "2012-10-17",
+            "Statement": [{"Effect": "Allow", "Action": ["s3:*", "ec2:*", "iam:*"], "Resource": "*"}]
+          }
+        },
+        "outputs": {}
+      },
+      {
+        "urn": "urn:pulumi:dev::demo::aws:iam/role:Role::app",
+        "custom": true,
+        "id": "app",
+        "type": "aws:iam/role:Role",
+        "inputs": {
+          "assumeRolePolicy": "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Effect\":\"Allow\",\"Principal\":{\"Service\":\"lambda.amazonaws.com\"},\"Action\":\"sts:AssumeRole\"}]}",
+          "inlinePolicies": [
+            {
+              "name": "logs",
+              "policy": "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Effect\":\"Allow\",\"Action\":\"logs:PutLogEvents\",\"Resource\":\"*\"}]}"
+            }
+          ]
+        },
+        "outputs": {}
+      },
+      {
+        "urn": "urn:pulumi:dev::demo::aws:s3/bucketPolicy:BucketPolicy::public",
+        "custom": true,
+        "id": "example-public-bucket",
+        "type": "aws:s3/bucketPolicy:BucketPolicy",
+        "inputs": {
+          "bucket": "example-public-bucket",
+          "policy": {
+            "Version": "2012-10-17",
+            "Statement": [
+              {
+                "Effect": "Allow",
+                "Principal": "*",
+                "Action": "s3:GetObject",
+                "Resource": "arn:aws:s3:::example-public-bucket/*"
+              }
+            ]
+          }
+        },
+        "outputs": {}
+      },
+      {
+        "urn": "urn:pulumi:dev::demo::aws:organizations/policy:Policy::tags",
+        "custom": true,
+        "id": "p-123",
+        "type": "aws:organizations/policy:Policy",
+        "inputs": {"type": "TAG_POLICY", "content": "{\"tags\":{}}"},
+        "outputs": {}
+      },
+      {
+        "urn": "urn:pulumi:dev::demo::aws:organizations/policy:Policy::deny-regions",
+        "custom": true,
+        "id": "p-456",
+        "type": "aws:organizations/policy:Policy",
+        "inputs": {
+          "type": "SERVICE_CONTROL_POLICY",
+          "content": "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Effect\":\"Deny\",\"Action\":\"ec2:*\",\"Resource\":\"*\"}]}"
+        },
+        "outputs": {}
+      }
+    ]
+  }
+}

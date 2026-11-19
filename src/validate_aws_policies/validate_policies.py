@@ -136,6 +136,27 @@ def merge_config(args: Any) -> Dict[str, Any]:
         value = getattr(args, key, None)
         if value is not None:
             config[key] = value
+    # Infrastructure as code inputs
+    for key in ("input", "reference_input"):
+        value = getattr(args, key, None)
+        if isinstance(value, (list, tuple)):
+            config[key] = list(value)
+        elif isinstance(config.get(key), str):
+            config[key] = [config[key]]
+    for key in ("source", "unknown_values"):
+        value = getattr(args, key, None)
+        if isinstance(value, str):
+            config[key] = value
+    params = dict(config.get("params") or {})
+    cli_params = getattr(args, "param", None)
+    if isinstance(cli_params, (list, tuple)):
+        params.update(dict(cli_params))
+    config["params"] = {str(k): str(v) for k, v in params.items()}
+    if getattr(args, "only_changed", False) is True:
+        config["only_changed"] = True
+    else:
+        config.setdefault("only_changed", False)
+
     for key in (
         "recursive",
         "continue_on_error",
@@ -225,7 +246,7 @@ def main() -> int:
             return EXIT_CONFIG_ERROR
 
         # Validate required configuration
-        if not config.get("policies_path"):
+        if not config.get("policies_path") and not config.get("input"):
             logger.error("Policies path is required")
             return EXIT_CONFIG_ERROR
 

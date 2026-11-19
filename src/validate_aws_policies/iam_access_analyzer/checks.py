@@ -91,7 +91,8 @@ def _record(
     summary = result.setdefault("summary", [])
     # The "No findings" placeholder would contradict a failed check.
     summary[:] = [entry for entry in summary if not is_placeholder(entry)]
-    policy_name = Path(result.get("filePolicy", "")).stem
+    file_policy = result.get("filePolicy", "")
+    policy_name = file_policy if result.get("source") else Path(file_policy).stem
     summary.append(_failure_entry(policy_name, name, message, reasons))
 
 
@@ -104,11 +105,14 @@ def _normalize_reasons(raw: Any) -> List[Dict[str, Any]]:
 
 def run_policy_checks(
     results: List[Dict[str, Any]],
-    policies_dir: Path,
+    policies_dir: Optional[Path],
     policy_type: str,
     config: Dict[str, Any],
     client: Optional[Any] = None,
     resource_type: Optional[str] = None,
+    documents: Optional[Dict[str, str]] = None,
+    reference_documents: Optional[Dict[str, str]] = None,
+    strict_resource_type: bool = False,
 ) -> None:
     """Run the enabled custom policy checks on already validated policies.
 
@@ -117,7 +121,8 @@ def run_policy_checks(
 
     Args:
         results: Output of ``validate_policies`` for ``policies_dir``
-        policies_dir: Directory the result file names are relative to
+        policies_dir: Directory the result file names are relative to (None when
+            ``documents`` is given)
         policy_type: ``identity``, ``resource``, ``scp`` or ``rcp``
         config: Configuration with ``check_no_new_access``, ``reference_path``,
             ``strict_references``, ``check_access_not_granted``, ``deny_actions``,
@@ -126,6 +131,15 @@ def run_policy_checks(
         resource_type: Resource type of the policy set (policy sets only). When it
             differs from the ``check_no_public_access`` resource type, the public
             access check is skipped for this set.
+
+        documents: Policy texts by result name, for policies that are not files (IaC).
+            When given, nothing is read from ``policies_dir``.
+        strict_resource_type: Run ``check_no_public_access`` only on policies whose
+            ``resource_type`` matches it. Used for IaC, where a group without a specific
+            resource type (for example an SQS queue policy) must not be checked as an
+            S3 bucket policy.
+        reference_documents: Baseline policy texts by result name, used by
+            ``CheckNoNewAccess`` instead of files in ``reference_path``
 
     Raises:
         SdkFeatureError: If the installed boto3 lacks a required operation
@@ -161,6 +175,9 @@ def run_policy_checks(
     api_public_type = (
         resolve_public_access_resource_type(client, str(public_access_type)) if run_public else ""
     )
+    if run_public and strict_resource_type and not resource_type:
+        logger.info("Skipping CheckNoPublicAccess for policies without a specific resource type")
+        run_public = False
     if run_public and resource_type:
         try:
             set_api_type = resolve_resource_type(resource_type)
@@ -182,11 +199,19 @@ def run_policy_checks(
             logger.info(f"Skipping custom checks for {name}: policy has ERROR findings")
             continue
 
-        policy_file = policies_dir / name
-        document = policy_file.read_text(encoding="utf-8")
+        if documents is not None:
+            if name not in documents:
+                continue
+            document = documents[name]
+        else:
+            if policies_dir is None:
+                raise ValueError("policies_dir or documents is required")
+            document = (policies_dir / name).read_text(encoding="utf-8")
 
         if run_new_access:
-            _check_new_access(client, result, name, document, api_type, reference_dir, config)
+            _check_new_access(
+                client, result, name, document, api_type, reference_dir, config, reference_documents
+            )
         if run_not_granted:
             access: Dict[str, List[str]] = {}
             if actions:
@@ -214,10 +239,24 @@ def _check_new_access(
     api_type: str,
     reference_dir: Optional[Path],
     config: Dict[str, Any],
+    reference_documents: Optional[Dict[str, str]] = None,
 ) -> None:
-    reference_file = reference_dir / name if reference_dir else None
-    if reference_file is None or not reference_file.is_file():
-        missing = f"No reference policy found at {reference_file}"
+    if reference_documents is not None:
+        reference_text = reference_documents.get(name)
+        reference_label = "the reference input"
+    else:
+        reference_file = reference_dir / name if reference_dir else None
+        reference_text = (
+            reference_file.read_text(encoding="utf-8")
+            if reference_file is not None and reference_file.is_file()
+            else None
+        )
+        reference_label = str(reference_file)
+
+    if reference_text is None:
+        missing = f"No reference policy found for {name} in {reference_label}"
+        if reference_documents is None:
+            missing = f"No reference policy found at {reference_label}"
         if config.get("strict_references"):
             logger.error(missing)
             _record(result, CHECK_NO_NEW_ACCESS, FAIL, missing)
@@ -226,9 +265,9 @@ def _check_new_access(
             _record(result, CHECK_NO_NEW_ACCESS, SKIPPED, missing)
         return
 
-    logger.info(f"Checking {name} grants no new access compared to {reference_file}...")
+    logger.info(f"Checking {name} grants no new access compared to {reference_label}...")
     response = client.check_no_new_access(
-        existingPolicyDocument=reference_file.read_text(encoding="utf-8"),
+        existingPolicyDocument=reference_text,
         newPolicyDocument=document,
         policyType=api_type,
     )

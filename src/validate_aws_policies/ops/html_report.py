@@ -295,10 +295,22 @@ def _render_policy(result: Dict[str, Any]) -> str:
             )
         body += f'<div class="checks"><span class="t">Custom checks</span>{"".join(chips)}</div>'
 
+    source = result.get("source") or {}
+    source_html = ""
+    if source:
+        source_html = (
+            f'<span class="chip mono" title="{_esc(source.get("file"))}">'
+            f'{_esc(source.get("type"))} \u00b7 {_esc(source.get("resourceType"))}</span>'
+        )
+        body = (
+            f'<p class="sub">Input: <span class="mono">{_esc(source.get("file"))}</span></p>'
+            + body
+        )
+
     opened = " open" if findings else ""
     return (
         f'<details class="policy"{opened} data-name="{_esc(name.lower())}">'
-        f'<summary><span class="name mono">{_esc(name)}</span>'
+        f'<summary><span class="name mono">{_esc(name)}</span>{source_html}'
         f'<span class="counts">{count_html}</span></summary>'
         f'<div class="body">{body}</div></details>'
     )
@@ -366,6 +378,25 @@ def render_html(
             for s in sets
         )
         meta_rows.append(f"<div><b>Policy sets</b>{chips}</div>")
+    inputs = metadata.get("inputs") or []
+    if inputs:
+        chips = "".join(
+            f'<span class="chip mono">{_esc(i.get("file"))} \u00b7 {_esc(i.get("type"))} '
+            f'\u00b7 {_esc(i.get("policies"))} policies</span>'
+            for i in inputs
+        )
+        meta_rows.append(f"<div><b>Inputs</b>{chips}</div>")
+    skipped = metadata.get("skipped") or []
+    if skipped:
+        items = "".join(
+            f'<li><span class="mono">{_esc(i.get("id"))}</span> '
+            f'<span class="sub">{_esc(i.get("reason"))}</span></li>'
+            for i in skipped
+        )
+        meta_rows.append(
+            f"<div><b>Not validated</b>{len(skipped)} policies could not be checked because "
+            f'their value is not known before deployment.<ul class="reasons">{items}</ul></div>'
+        )
     if metadata.get("checks"):
         chips = "".join(f'<span class="chip">{_esc(c)}</span>' for c in metadata["checks"])
         meta_rows.append(f"<div><b>Custom checks</b>{chips}</div>")

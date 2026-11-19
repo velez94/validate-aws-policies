@@ -45,9 +45,18 @@ def build_sarif(results: List[Dict[str, Any]], base_dir: Optional[str] = None) -
     sarif_results: List[Dict[str, Any]] = []
     artifacts: List[Dict[str, Any]] = []
 
+    seen_artifacts = set()
+
     for result in results:
-        uri = artifact_uri(str(result.get("filePolicy", "")), base_dir)
-        artifacts.append({"location": {"uri": uri}})
+        source = result.get("source")
+        if source:
+            # IaC policy: the artifact is the plan/template, the policy is a logical location
+            uri = artifact_uri(str(source.get("file", "")), None)
+        else:
+            uri = artifact_uri(str(result.get("filePolicy", "")), base_dir)
+        if uri not in seen_artifacts:
+            seen_artifacts.add(uri)
+            artifacts.append({"location": {"uri": uri}})
 
         for finding in real_findings(result):
             kind = str(finding.get("findingType", "WARNING"))
@@ -67,7 +76,8 @@ def build_sarif(results: List[Dict[str, Any]], base_dir: Optional[str] = None) -
                 rule["helpUri"] = link
 
             physical: Dict[str, Any] = {"artifactLocation": {"uri": uri}}
-            spans = finding_spans(finding)
+            # Spans point into the embedded policy JSON, not into the IaC file
+            spans = [] if source else finding_spans(finding)
             if spans:
                 start_line, start_col, end_line, end_col = spans[0]
                 physical["region"] = {
@@ -77,12 +87,21 @@ def build_sarif(results: List[Dict[str, Any]], base_dir: Optional[str] = None) -
                     "endColumn": end_col + 1,
                 }
 
+            location: Dict[str, Any] = {"physicalLocation": physical}
+            message = finding_message(finding)
+            if source:
+                resource_id = str(result.get("filePolicy", ""))
+                location["logicalLocations"] = [
+                    {"name": resource_id, "kind": "resource", "fullyQualifiedName": resource_id}
+                ]
+                message = f"{resource_id}: {message}"
+
             sarif_results.append(
                 {
                     "ruleId": rule_id,
                     "level": level,
-                    "message": {"text": finding_message(finding)},
-                    "locations": [{"physicalLocation": physical}],
+                    "message": {"text": message},
+                    "locations": [location],
                     "properties": {"findingType": kind},
                 }
             )

@@ -1,0 +1,174 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: Policies that exercise the intrinsic function resolver
+
+Parameters:
+  Env:
+    Type: String
+    Default: prod
+  BucketName:
+    Type: String            # no default: unresolved unless --param BucketName=...
+  Principals:
+    Type: CommaDelimitedList
+    Default: "arn:aws:iam::111122223333:root,arn:aws:iam::444455556666:root"
+
+Mappings:
+  Logging:
+    prod:
+      Retention: "90"
+    dev:
+      Retention: "7"
+
+Conditions:
+  IsProd: !Equals [!Ref Env, prod]
+  NotProd: !Not [!Condition IsProd]
+
+Resources:
+  AppRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: logs
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action: logs:PutLogEvents
+                Resource: !Sub "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/app/${Env}:*"
+        - PolicyName: data
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action: s3:GetObject
+                Resource: !Join ["", [!GetAtt DataBucket.Arn, "/*"]]
+        - PolicyName: needs-param
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action: s3:GetObject
+                Resource: !Sub "arn:aws:s3:::${BucketName}/*"
+
+  DataBucket:
+    Type: AWS::S3::Bucket
+
+  DataBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref DataBucket
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              AWS: !Ref Principals
+            Action: s3:GetObject
+            Resource: !Sub "${DataBucket.Arn}/*"
+          - !If
+            - IsProd
+            - Effect: Deny
+              Principal: "*"
+              Action: s3:*
+              Resource: !Sub "${DataBucket.Arn}/*"
+              Condition:
+                Bool:
+                  aws:SecureTransport: "false"
+            - !Ref AWS::NoValue
+
+  Queue:
+    Type: AWS::SQS::Queue
+
+  QueuePolicy:
+    Type: AWS::SQS::QueuePolicy
+    Properties:
+      Queues: [!Ref Queue]
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: sns.amazonaws.com
+            Action: sqs:SendMessage
+            Resource: !GetAtt Queue.Arn
+            Condition:
+              ArnEquals:
+                aws:SourceArn: !ImportValue shared-topic-arn
+
+  ProdOnlyPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Condition: IsProd
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action: !Split [",", "ec2:DescribeInstances,ec2:DescribeVolumes"]
+            Resource: "*"
+
+  DevOnlyPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Condition: NotProd
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action: "*"
+            Resource: "*"
+
+  WorkerKey:
+    Type: AWS::KMS::Key
+    Properties:
+      KeyPolicy:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              AWS: !Sub "arn:aws:iam::${AWS::AccountId}:root"
+            Action: "kms:*"
+            Resource: "*"
+
+  DenyRegions:
+    Type: AWS::Organizations::Policy
+    Properties:
+      Name: deny-regions
+      Type: SERVICE_CONTROL_POLICY
+      Content:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Deny
+            Action: "ec2:*"
+            Resource: "*"
+            Condition:
+              StringNotEquals:
+                aws:RequestedRegion: [us-east-1]
+      TargetIds: [r-exampleroot]
+
+  RequiredTags:
+    Type: AWS::Organizations::Policy
+    Properties:
+      Name: tags
+      Type: TAG_POLICY
+      Content:
+        tags:
+          CostCenter:
+            tag_key:
+              "@@assign": CostCenter
+
+  UnresolvableRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: !Select [0, !GetAZs ""]
+            Action: sts:AssumeRole

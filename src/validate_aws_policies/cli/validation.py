@@ -15,6 +15,8 @@ from ..iam_access_analyzer.constants import (
     RESOURCE_TYPES,
 )
 
+INPUT_SOURCES = ("auto", "terraform-plan", "cloudformation", "pulumi")
+
 
 def apply_checks_section(config: Dict[str, Any]) -> None:
     """Flatten the optional ``checks`` mapping of a config file.
@@ -94,6 +96,21 @@ def validate_merged_config(config: Dict[str, Any]) -> List[str]:
     if max_findings is not None and (not isinstance(max_findings, int) or max_findings < 1):
         errors.append("max_findings must be a positive integer")
 
+    # Infrastructure as code inputs
+    input_paths = config.get("input")
+    if input_paths:
+        if config.get("policy_sets"):
+            errors.append("input cannot be combined with policy_sets")
+        source = config.get("source")
+        if source is not None and source not in INPUT_SOURCES:
+            errors.append(
+                f"Unsupported source '{source}'. Supported: auto, terraform-plan, "
+                "cloudformation, pulumi"
+            )
+    unknown_values = config.get("unknown_values")
+    if unknown_values is not None and unknown_values not in ("skip", "fail"):
+        errors.append(f"Unsupported unknown_values '{unknown_values}'. Supported: skip, fail")
+
     # Policy sets and resource types
     sets = config.get("policy_sets")
     types_in_use = [policy_type]
@@ -120,7 +137,7 @@ def validate_merged_config(config: Dict[str, Any]) -> List[str]:
                     errors.append(f"{label}: unsupported resource_type '{set_resource}'")
 
     resource_type = config.get("resource_type")
-    if resource_type:
+    if resource_type and not input_paths:
         if not _resource_type_known(str(resource_type)):
             errors.append(
                 f"Unsupported resource_type '{resource_type}'. "
@@ -134,7 +151,10 @@ def validate_merged_config(config: Dict[str, Any]) -> List[str]:
     not_granted = bool(config.get("check_access_not_granted"))
     public_access = config.get("check_no_public_access")
 
-    if new_access:
+    if new_access and input_paths:
+        if not config.get("reference_input"):
+            errors.append("check_no_new_access requires reference_input (--reference-input)")
+    elif new_access:
         reference = config.get("reference_path")
         if not reference:
             errors.append("check_no_new_access requires reference_path (--reference-path)")
@@ -146,14 +166,16 @@ def validate_merged_config(config: Dict[str, Any]) -> List[str]:
     )):
         errors.append("check_access_not_granted requires deny_actions and/or deny_resources")
 
-    if (new_access or not_granted or public_access) and not any(
-        kind in CHECKABLE_POLICY_TYPES for kind in types_in_use
+    if (
+        (new_access or not_granted or public_access)
+        and not input_paths
+        and not any(kind in CHECKABLE_POLICY_TYPES for kind in types_in_use)
     ):
         errors.append(
             "Custom policy checks support identity and resource policies only "
             f"(got: {', '.join(sorted(set(types_in_use)))})"
         )
-    if public_access and "resource" not in types_in_use:
+    if public_access and not input_paths and "resource" not in types_in_use:
         errors.append("check_no_public_access requires policy_type 'resource'")
 
     return errors
