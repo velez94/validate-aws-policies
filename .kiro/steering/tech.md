@@ -48,5 +48,6 @@ mkdocs serve                # docs; use `mkdocs build --strict` before committin
 - `README.md` was refreshed for 3.x; `docs/*.md` may still mention removed flags. `version` lives in both `pyproject.toml` and `version.py`; bump both.
 - `.kiro/steering/improvements.md` is a historical recommendation list. Many items are already implemented. Check the code before treating an item as open.
 - `scripts/validate_junit_xml.py` is a manual validator for CodeBuild JUnit output, not a pytest test.
+- IaC extraction (`sources/`): spec in `.kiro/specs/iac-policy-extraction/`. Extractors only read mapped policy attributes (never log other plan values). Terraform/OpenTofu fixtures are real tool output; Pulumi fixtures are written from the documented formats because Pulumi is not available here. CloudFormation placeholders were chosen by testing shapes against the live API (an `ImportValue` placeholder must be an IAM-role-shaped ARN).
 - Design and status of the Access Analyzer adoption (policy types, custom checks, policy sets, SARIF): `.kiro/specs/access-analyzer-modernization/plan.md`. Everything in 3.x must stay backward compatible.
 - The `--format all` and `bucket` config key mismatches in older docs were fixed in 3.2 (both are accepted now).

@@ -61,6 +61,12 @@ for a commented starting point.
 |---|---|---|---|
 | `profile` | string | none | `--profile` |
 | `policies_path` | string | `./policies` | `--policies-path` |
+| `input` | list | none | `--input` (IaC plan, template or Pulumi JSON; replaces `policies_path`) |
+| `source` | string | `auto` | `--source` |
+| `reference_input` | list | none | `--reference-input` |
+| `params` | mapping | none | `--param` (CloudFormation parameters) |
+| `unknown_values` | string | `skip` | `--unknown-values` |
+| `only_changed` | bool | false | `--only-changed` |
 | `policy_type` | string | `identity` | `--policy-type` |
 | `resource_type` | string | none | `--resource-type` |
 | `locale` | string | `EN` | `--locale` |
@@ -87,7 +93,7 @@ for a commented starting point.
 | `policy_sets` | list | none | config file only |
 | `ci` | bool | false | `--ci` (no effect today) |
 
-`checks` and `policy_sets` are described in
+`input` and its related keys are described in [Infrastructure as Code Inputs](iac.md). `checks` and `policy_sets` are described in
 [Policy Types & Custom Checks](access-analyzer-features.md#policy-sets). Unknown keys are
 ignored.
 

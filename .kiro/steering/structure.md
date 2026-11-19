@@ -9,6 +9,13 @@ src/validate_aws_policies/
 │   ├── validation.py             # validate_merged_config (config-file values), apply_checks_section
 │   ├── config.py                 # ConfigLoader (defaults < YAML/TOML < env vars), ConfigError
 │   └── exit_codes.py             # EXIT_SUCCESS/VALIDATION/CONFIG/AWS/FILE (0-4)
+├── sources/                      # IaC extractors: input -> PolicyDocument list
+│   ├── __init__.py               # extract(), detect_source(), directory handling
+│   ├── base.py                   # PolicyDocument, MapEntry, ExtractionResult, walk_path
+│   ├── resource_maps.py          # data tables: which attributes hold policies (Terraform, CFN, Pulumi)
+│   ├── terraform.py              # terraform/opentofu plan and state
+│   ├── cloudformation.py         # YAML loader with tags, intrinsic resolver, extractor
+│   └── pulumi.py                 # stack export and preview --json
 ├── core/
 │   └── validator.py              # PolicyValidator: policy sets, discovery, validate, checks, output, reports, upload, exit code
 ├── iam_access_analyzer/
@@ -25,9 +32,9 @@ src/validate_aws_policies/
 
 tests/
 ├── conftest.py                   # shared fixtures (policy dicts, fixtures dirs)
-├── unit/                         # test_args, test_args_integration, test_checks, test_config, test_config_precedence, test_iam_access_analyzer, test_main, test_main_flow, test_new_features, test_reports, test_upload_retry, test_validator
+├── unit/                         # test_args, test_args_integration, test_checks, test_iac_pipeline, test_sources, test_config, test_config_precedence, test_iam_access_analyzer, test_main, test_main_flow, test_new_features, test_reports, test_upload_retry, test_validator
 ├── integration/                  # empty
-└── fixtures/{sample_policies,config_files}
+└── fixtures/{sample_policies,config_files,iac}   # iac: real Terraform/OpenTofu plans, CFN templates, Pulumi JSON (see its README)
 
 scripts/validate_junit_xml.py     # manual CodeBuild JUnit XML validator
 docs/                             # mkdocs site: index, installation, usage, configuration, access-analyzer-features, examples, codebuild, JUNIT_XML_REPORT, api, development, changelog (includes CHANGELOG.md), assets/sample-report.html
@@ -38,9 +45,12 @@ config.example.{yaml,toml}        # sample config files
 .github/workflows/docs.yml        # mkdocs build --strict, deploy to GitHub Pages from main
 .kiro/specs/cli-developer-improvements/   # requirements, design, tasks for the 3.x CLI modernization
 .kiro/specs/access-analyzer-modernization/ # plan for adopting new Access Analyzer APIs
+.kiro/specs/iac-policy-extraction/        # requirements, design, tasks for Terraform/CloudFormation/Pulumi inputs
 ```
 
 ## Data flow
+
+With `--input`, `PolicyValidator._run_iac()` replaces steps 1-2: `sources.extract()` -> group by (policy type, resource type) -> `validate_policy_documents()` -> `run_policy_checks(documents=..., reference_documents=...)` -> the same shared tail (`_finish`).
 
 `main()` -> `parse_args()` (validates) -> `setup_logging()` -> `merge_config()` -> `validate_merged_config()` -> optional `boto3.setup_default_session(profile)` -> `PolicyValidator(config).run()`:
 
@@ -56,6 +66,7 @@ config.example.{yaml,toml}        # sample config files
 
 - New CLI flag: `cli/args.py` (use `default=None` for value options), then `merge_config` in `validate_policies.py`.
 - New config key or env var: `cli/config.py` (`_load_defaults`, `ENV_VAR_MAP`).
+- New IaC resource type: one `MapEntry` in `sources/resource_maps.py` plus a test; no extractor code.
 - New output format: `ops/reports.py` method, wire it in `PolicyValidator._generate_reports`, add the choice and extension to `--format` in `cli/args.py`, and add tests.
 - New Access Analyzer API call: feature-detect it in `iam_access_analyzer/features.py`, add Stubber-based tests, and keep the boto3 floor unchanged.
 - Version bump: `pyproject.toml`, `version.py`, `CHANGELOG.md`.

@@ -38,6 +38,20 @@ validate-aws-policies -d ./bucket-policies --policy-type resource --resource-typ
 See [Policy Types & Custom Checks](access-analyzer-features.md) for resource types, custom
 checks and validating several types in one run.
 
+## Policies from Terraform, CloudFormation, CDK or Pulumi
+
+Instead of policy files, validate the policies in an IaC plan or template:
+
+```bash
+validate-aws-policies --input plan.json              # terraform show -json / tofu show -json
+validate-aws-policies --input template.yaml --param Env=prod
+validate-aws-policies --input cdk.out
+validate-aws-policies --input preview.json           # pulumi preview --json
+```
+
+Results are named after the resource address, for example `aws_iam_policy.deploy`. See
+[Infrastructure as Code Inputs](iac.md).
+
 ## Output formats
 
 `--format` (`-f`) selects the output. `json` is the default.

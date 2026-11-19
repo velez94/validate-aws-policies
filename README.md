@@ -18,6 +18,7 @@ Markdown, JUnit XML or SARIF.
 ## Features
 
 - **Policy types:** identity, resource, service control (SCP) and resource control (RCP) policies, with resource-specific checks for S3 buckets, access points, role trust policies and DynamoDB tables.
+- **Infrastructure as code:** validate the policies in a Terraform or OpenTofu plan, a CloudFormation or CDK template, or Pulumi output before you deploy.
 - **Custom policy checks:** fail a build when a policy grants new access compared to a baseline, grants actions or resources you have forbidden, or can be public.
 - **Reports:** JSON, text, a self-contained HTML report, Markdown, JUnit XML (CodeBuild, Azure Pipelines, Jenkins, GitLab) and SARIF (GitHub code scanning).
 - **Built for pipelines:** specific exit codes, `--fail-on` severity thresholds, `--dry-run`, JSON logs, S3 upload and ZIP archives.
@@ -86,10 +87,43 @@ Policy: my-policy.json
       https://docs.aws.amazon.com/IAM/latest/UserGuide/access-analyzer-reference-policy-checks.html#...
 ```
 
+## Validate infrastructure as code
+
+Skip the policy files and validate what your IaC is about to deploy:
+
+```bash
+# Terraform / OpenTofu
+terraform show -json tfplan > plan.json
+validate-aws-policies --input plan.json --only-changed --fail-on error
+
+# CloudFormation / CDK (cdk synth writes cdk.out)
+validate-aws-policies --input template.yaml --param Environment=prod
+validate-aws-policies --input cdk.out
+
+# Pulumi
+pulumi preview --json > preview.json
+validate-aws-policies --input preview.json
+
+# Fail when a policy grants more access than on the main branch
+validate-aws-policies --input plan.json --check-no-new-access --reference-input baseline.json
+```
+
+Policies are found by resource type (IAM policies, role trust policies, S3, SQS, SNS, KMS, ECR,
+Secrets Manager and Organizations policies, and more), validated with the matching policy type,
+and reported under the resource address, for example `module.queue.aws_sqs_queue_policy.q`.
+Policies that depend on values unknown before deployment are skipped and listed. See the
+[infrastructure as code guide](https://velez94.github.io/validate-aws-policies/iac/).
+
 ## Options
 
 ```text
 -d, --policies-path PATH   Directory with policy *.json files
+-i, --input PATH [PATH]    Terraform/OpenTofu plan JSON, CloudFormation/CDK template or
+                           directory, Pulumi JSON (replaces --policies-path)
+    --reference-input PATH Baseline input for --check-no-new-access
+    --param KEY=VALUE      CloudFormation parameter (repeatable)
+    --unknown-values MODE  skip (default) or fail for policies unknown before deployment
+    --only-changed         Terraform/Pulumi: only created or updated resources
 -r, --recursive            Also read sub-directories
 -t, --policy-type TYPE     identity (default), resource, scp, rcp
     --resource-type TYPE   For resource policies: s3-bucket, s3-access-point, s3-mrap,

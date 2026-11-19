@@ -8,6 +8,13 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 <!-- insertion marker -->
 ## [Unreleased]
 
+### Added
+
+- Validate the policies of infrastructure as code: `--input` reads a Terraform or OpenTofu plan (`terraform show -json`), a CloudFormation or CDK template (JSON or YAML, with intrinsic functions resolved), or Pulumi `stack export` and `preview --json` output. Policies are grouped by type and validated with the matching Access Analyzer policy type, then go through the usual custom checks, reports and exit codes. See the new "Infrastructure as Code Inputs" page.
+- `--source`, `--reference-input` (baseline plan or template for `--check-no-new-access`), `--param KEY=VALUE` (CloudFormation parameters), `--unknown-values {skip,fail}` and `--only-changed`, with matching config keys.
+- Results of IaC policies are named after the resource address or logical id and carry an optional `source` object. SARIF results point to the input file with a logical location; the HTML report shows the source of each policy, the inputs and the policies that could not be validated.
+- Python API: `validate_aws_policies.sources.extract()` and `validate_policy_documents()`.
+
 ### Fixed
 
 - `verbose`, `quiet` and `log_format` in a config file and the `LOG_LEVEL` environment variable are now applied. They were ignored before. `verbose` and `quiet` together in a file is a configuration error.

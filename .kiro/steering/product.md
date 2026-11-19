@@ -8,6 +8,8 @@ A Python CLI (PyPI package `validate_aws_policies`, current version 3.2.0) that 
 
 ## What it does
 
+Input is a directory of policy files, or (`--input`) the policies inside a Terraform/OpenTofu plan, a CloudFormation/CDK template or Pulumi JSON. IaC policies are found through resource tables, grouped by policy type, and reported under their resource address. Policies whose value is unknown before deployment are skipped and listed, never guessed.
+
 1. Reads every `*.json` file in a policies directory (non-recursive by default, `--recursive` optional) or in each `policy_sets` entry from a config file.
 2. Sends each file to Access Analyzer `validate_policy` (paginated) with the configured policy type (identity default, resource, scp, rcp), resource type and locale.
 3. Optionally runs custom policy checks (`CheckNoNewAccess`, `CheckAccessNotGranted`, `CheckNoPublicAccess`) on identity and resource policies. These are billed per API call.

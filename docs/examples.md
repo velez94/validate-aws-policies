@@ -29,6 +29,26 @@ validate-aws-policies -d ./policies -f all --zip            # html + md + xml in
 validate-aws-policies -d ./policies -f sarif -o results.sarif
 ```
 
+## Terraform, CloudFormation, CDK and Pulumi
+
+```bash
+terraform show -json tfplan > plan.json
+validate-aws-policies --input plan.json --fail-on error
+
+validate-aws-policies --input template.yaml --param Environment=prod
+validate-aws-policies --input cdk.out -f sarif -o results.sarif
+pulumi preview --json | tee preview.json >/dev/null && validate-aws-policies --input preview.json
+```
+
+Policy changes in a pull request, compared with the main branch:
+
+```bash
+validate-aws-policies --input plan.json --only-changed \
+  --check-no-new-access --reference-input baseline.json
+```
+
+See [Infrastructure as Code Inputs](iac.md) for every detail.
+
 ## Different policy types
 
 ```bash

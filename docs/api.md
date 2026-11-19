@@ -24,6 +24,17 @@
 | `--max-findings N` | | Collect at most N findings per policy |
 | `--profile NAME` | `-p` | AWS profile |
 
+### Infrastructure as code
+
+| Option | Description |
+|---|---|
+| `--input PATH [PATH ...]`, `-i` | Terraform/OpenTofu plan JSON, CloudFormation/CDK template or directory, Pulumi export or preview JSON. Replaces `--policies-path`. |
+| `--source SOURCE` | `auto` (default), `terraform-plan`, `cloudformation`, `pulumi` |
+| `--reference-input PATH [PATH ...]` | Baseline input for `--check-no-new-access` |
+| `--param KEY=VALUE` | CloudFormation parameter, repeatable |
+| `--unknown-values {skip,fail}` | Policies unknown before deployment: skip (default) or exit 1 |
+| `--only-changed` | Only created or updated resources (Terraform, Pulumi) |
+
 ### Output
 
 | Option | Short | Description |
@@ -99,6 +110,11 @@ All functions exchange the same list of results, one per policy file:
 ]
 ```
 
+Policies that come from an IaC input have the resource address or logical id as `filePolicy`
+and one more key, `source`: `{"type": "terraform-plan", "file": "plan.json", "resourceType":
+"aws_iam_policy"}`. Policies skipped because their value is unknown are not part of the
+results.
+
 A policy with no findings has one placeholder entry with `findingType` and `issueCode`
 `"None"`. Failed custom checks appear in `summary` with `findingType` `ERROR`, an
 `issueCode` of `CHECK_NO_NEW_ACCESS`, `CHECK_ACCESS_NOT_GRANTED` or
@@ -158,6 +174,30 @@ results = validate_policies(
 Raises `FileNotFoundError`, `NotADirectoryError`, `ValueError` (invalid argument or ERROR
 finding), `botocore.exceptions.ClientError`, and `SdkFeatureError` when the installed boto3
 does not support a requested option.
+
+### `extract` and `validate_policy_documents`
+
+```python
+from validate_aws_policies.sources import ExtractOptions, extract
+from validate_aws_policies.iam_access_analyzer.iam_access_analyzer import validate_policy_documents
+
+extraction = extract(["plan.json"], source=None, options=ExtractOptions(only_changed=True))
+for doc in extraction.documents:          # PolicyDocument: id, text, policy_type, resource_type, ...
+    print(doc.id, doc.policy_type, doc.resource_type)
+print([s.id for s in extraction.skipped])  # policies whose value is not known yet
+
+results = validate_policy_documents(
+    [(doc.id, doc.text) for doc in extraction.documents if doc.policy_type == "identity"],
+    policy_type="identity",
+)
+```
+
+`extract(inputs, source=None, options=None, recursive=False)` reads the inputs and returns an
+`ExtractionResult` with `documents` and `skipped`. It raises `FileNotFoundError` for a missing
+input and `SourceError` for an input that is not valid or not recognized.
+`validate_policy_documents(documents, policy_type, resource_type, locale, max_findings,
+fail_fast, client)` validates `(name, json_text)` pairs and returns the same result entries as
+`validate_policies`.
 
 ### `run_policy_checks`
 
