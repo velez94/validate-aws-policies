@@ -82,8 +82,8 @@ files fetched from S3) and compare against it:
         --reference-path baseline --format xml --output reports/policies.xml
 ```
 
-Custom checks are billed per API call, see
-[Policy Types & Custom Checks](access-analyzer-features.md#custom-policy-checks).
+Custom checks are billed per API call, and every build that runs them is billed again. See
+[what custom checks cost](access-analyzer-features.md#what-custom-checks-cost).
 
 ## How findings appear in CodeBuild
 

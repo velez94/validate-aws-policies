@@ -202,7 +202,8 @@ validate-aws-policies --input plan.json \
 ```
 
 A policy that is not in the baseline is skipped. Add `--strict-references` to fail instead. Use
-`--only-changed` to limit billed calls to what the change touches. See
+`--only-changed` to limit billed calls to what the change touches (see
+[what custom checks cost](access-analyzer-features.md#what-custom-checks-cost)). See
 [custom checks](access-analyzer-features.md#custom-policy-checks) for the other checks. In IaC
 mode the public-access check runs only on policies of the matching resource type, so
 `--check-no-public-access s3-bucket` checks bucket policies and nothing else.

@@ -123,7 +123,8 @@ Policy validation is free. Grant only what you use:
 ```
 
 !!! note "Cost"
-    Custom policy checks are billed per API call. See the
+    Custom policy checks are billed per API call and are off unless you enable them. See
+    [what custom checks cost](access-analyzer-features.md#what-custom-checks-cost) and the
     [Access Analyzer pricing page](https://aws.amazon.com/iam/access-analyzer/pricing/).
 
 ## Shell completion

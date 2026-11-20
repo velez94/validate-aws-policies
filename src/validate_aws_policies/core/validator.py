@@ -59,6 +59,7 @@ class PolicyValidator:
         self.report_generator = ReportGenerator()
         self._base_dir: Optional[str] = None
         self._targets_info: list[dict[str, Any]] = []
+        self._check_calls = 0
         self._skipped: list[SkippedPolicy] = []
         self._iac_inputs: list[dict[str, Any]] = []
 
@@ -84,6 +85,12 @@ class PolicyValidator:
             - EXIT_AWS_ERROR (3): AWS API error
             - EXIT_FILE_ERROR (4): File operation error
         """
+        if checks_requested(self.config):
+            logger.info(
+                "Custom policy checks are enabled. AWS bills each check API call "
+                "(about one per policy and check); policy validation is free."
+            )
+
         try:
             if self.config.get("input"):
                 return self._run_iac()
@@ -121,12 +128,14 @@ class PolicyValidator:
                 )
 
                 if checks_requested(self.config):
-                    run_policy_checks(
-                        set_results,
-                        policies_path,
-                        target["policy_type"],
-                        self.config,
-                        resource_type=target.get("resource_type"),
+                    self._count_check_calls(
+                        run_policy_checks(
+                            set_results,
+                            policies_path,
+                            target["policy_type"],
+                            self.config,
+                            resource_type=target.get("resource_type"),
+                        )
                     )
 
                 if len(targets) > 1:
@@ -159,8 +168,18 @@ class PolicyValidator:
             logger.exception(f"Unexpected error during validation: {e}")
             return EXIT_VALIDATION_ERROR
 
+    def _count_check_calls(self, calls: Any) -> None:
+        """Add the billed API calls made by the custom policy checks."""
+        if isinstance(calls, int):
+            self._check_calls += calls
+
     def _finish(self, results: list[dict[str, Any]]) -> int:
         """Write the output and reports, upload them, and decide the exit code."""
+        if checks_requested(self.config):
+            logger.info(
+                f"Custom policy checks made {self._check_calls} billed API calls "
+                "(https://aws.amazon.com/iam/access-analyzer/pricing/)"
+            )
         # Output results
         self._output_results(results)
 
@@ -255,15 +274,17 @@ class PolicyValidator:
                 }
 
             if checks_requested(self.config):
-                run_policy_checks(
-                    group_results,
-                    None,
-                    policy_type,
-                    self.config,
-                    resource_type=resource_type,
-                    documents={doc.id: doc.text for doc in docs},
-                    reference_documents=references,
-                    strict_resource_type=True,
+                self._count_check_calls(
+                    run_policy_checks(
+                        group_results,
+                        None,
+                        policy_type,
+                        self.config,
+                        resource_type=resource_type,
+                        documents={doc.id: doc.text for doc in docs},
+                        reference_documents=references,
+                        strict_resource_type=True,
+                    )
                 )
             results.extend(group_results)
 

@@ -119,9 +119,11 @@ class TestReportsAndUpload:
     def test_all_formats(self, policies_dir):
         v = make(policies_dir, format="all")
         rg = v.report_generator
-        with patch.object(rg, "create_html_report", return_value=Path("a.html")), patch.object(
-            rg, "create_markdown_report", return_value=Path("a.md")
-        ), patch.object(rg, "create_junit_xml_report", return_value=Path("a.xml")):
+        with (
+            patch.object(rg, "create_html_report", return_value=Path("a.html")),
+            patch.object(rg, "create_markdown_report", return_value=Path("a.md")),
+            patch.object(rg, "create_junit_xml_report", return_value=Path("a.xml")),
+        ):
             assert len(v._generate_reports(RESULTS)) == 3
 
     def test_zip_replaces_files(self, policies_dir):
@@ -150,17 +152,21 @@ class TestReportsAndUpload:
     @pytest.mark.parametrize("flag", ["upload", "upload_report"])
     def test_run_uploads_with_either_key(self, policies_dir, flag):
         v = make(policies_dir, format="html", bucket_name="b", **{flag: True})
-        with patch(f"{MODULE}.validate_policies", return_value=RESULTS), patch.object(
-            v.report_generator, "create_html_report", return_value=Path("r.html")
-        ), patch(f"{MODULE}.upload_file") as up:
+        with (
+            patch(f"{MODULE}.validate_policies", return_value=RESULTS),
+            patch.object(v.report_generator, "create_html_report", return_value=Path("r.html")),
+            patch(f"{MODULE}.upload_file") as up,
+        ):
             assert v.run() == EXIT_SUCCESS
         assert up.call_count == 1
 
     def test_dry_run_skips_reports_and_upload(self, policies_dir):
         v = make(policies_dir, format="html", upload=True, bucket_name="b", dry_run=True)
-        with patch(f"{MODULE}.validate_policies", return_value=RESULTS), patch.object(
-            v.report_generator, "create_html_report"
-        ) as html, patch(f"{MODULE}.upload_file") as up:
+        with (
+            patch(f"{MODULE}.validate_policies", return_value=RESULTS),
+            patch.object(v.report_generator, "create_html_report") as html,
+            patch(f"{MODULE}.upload_file") as up,
+        ):
             assert v.run() == EXIT_SUCCESS
         html.assert_not_called()
         up.assert_not_called()
@@ -169,9 +175,11 @@ class TestReportsAndUpload:
 class TestUploadFailure:
     def test_failed_upload_exits_with_aws_error(self, policies_dir):
         v = make(policies_dir, format="html", upload=True, bucket_name="b")
-        with patch(f"{MODULE}.validate_policies", return_value=RESULTS), patch.object(
-            v.report_generator, "create_html_report", return_value=Path("r.html")
-        ), patch(f"{MODULE}.upload_file", return_value=False):
+        with (
+            patch(f"{MODULE}.validate_policies", return_value=RESULTS),
+            patch.object(v.report_generator, "create_html_report", return_value=Path("r.html")),
+            patch(f"{MODULE}.upload_file", return_value=False),
+        ):
             assert v.run() == EXIT_AWS_ERROR
 
 
@@ -193,3 +201,28 @@ class TestTextOutputWithoutFindings:
         assert "None: None" not in text
         # policies with findings keep the finding line
         assert "  - WARNING: X" in text
+
+
+class TestBilledCallsAreReported:
+    def test_summary_and_upfront_notice(self, policies_dir, caplog):
+        import logging
+
+        validator = make(
+            policies_dir, dry_run=True, check_access_not_granted=True, deny_actions=["a:b"]
+        )
+        with (
+            patch(f"{MODULE}.validate_policies", return_value=RESULTS),
+            patch(f"{MODULE}.run_policy_checks", return_value=3),
+        ):
+            with caplog.at_level(logging.INFO):
+                assert validator.run() == EXIT_SUCCESS
+        assert "bills each check API call" in caplog.text
+        assert "made 3 billed API calls" in caplog.text
+
+    def test_no_message_without_checks(self, policies_dir, caplog):
+        import logging
+
+        with patch(f"{MODULE}.validate_policies", return_value=RESULTS):
+            with caplog.at_level(logging.INFO):
+                make(policies_dir, dry_run=True).run()
+        assert "billed" not in caplog.text

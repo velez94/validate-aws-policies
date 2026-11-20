@@ -113,7 +113,7 @@ def run_policy_checks(
     documents: Optional[dict[str, str]] = None,
     reference_documents: Optional[dict[str, str]] = None,
     strict_resource_type: bool = False,
-) -> None:
+) -> int:
     """Run the enabled custom policy checks on already validated policies.
 
     Results are modified in place. Policies that already have ERROR findings are
@@ -141,17 +141,21 @@ def run_policy_checks(
         reference_documents: Baseline policy texts by result name, used by
             ``CheckNoNewAccess`` instead of files in ``reference_path``
 
+    Returns:
+        The number of billed check API calls made. AWS charges per call for
+        ``CheckNoNewAccess``, ``CheckAccessNotGranted`` and ``CheckNoPublicAccess``.
+
     Raises:
         SdkFeatureError: If the installed boto3 lacks a required operation
         ClientError: If an API call fails
     """
     if not checks_requested(config):
-        return
+        return 0
 
     kind = policy_type.lower()
     if kind not in CHECKABLE_POLICY_TYPES:
         logger.warning(f"Custom policy checks do not support '{kind}' policies; skipping checks")
-        return
+        return 0
 
     api_type = POLICY_TYPES[kind]
     if client is None:
@@ -193,6 +197,7 @@ def run_policy_checks(
     actions = list(config.get("deny_actions") or [])
     resources = list(config.get("deny_resources") or [])
 
+    calls = 0
     for result in results:
         name = result.get("filePolicy", "")
         if any(f.get("findingType") == "ERROR" for f in result.get("summary", [])):
@@ -209,7 +214,7 @@ def run_policy_checks(
             document = (policies_dir / name).read_text(encoding="utf-8")
 
         if run_new_access:
-            _check_new_access(
+            calls += _check_new_access(
                 client, result, name, document, api_type, reference_dir, config, reference_documents
             )
         if run_not_granted:
@@ -222,13 +227,16 @@ def run_policy_checks(
             response = client.check_access_not_granted(
                 policyDocument=document, access=[access], policyType=api_type
             )
+            calls += 1
             _record_response(result, CHECK_ACCESS_NOT_GRANTED, response)
         if run_public:
             logger.info(f"Checking {name} does not allow public access to {api_public_type}...")
             response = client.check_no_public_access(
                 policyDocument=document, resourceType=api_public_type
             )
+            calls += 1
             _record_response(result, CHECK_NO_PUBLIC_ACCESS, response)
+    return calls
 
 
 def _check_new_access(
@@ -240,7 +248,8 @@ def _check_new_access(
     reference_dir: Optional[Path],
     config: dict[str, Any],
     reference_documents: Optional[dict[str, str]] = None,
-) -> None:
+) -> int:
+    """Run CheckNoNewAccess for one policy. Returns the number of API calls made (0 or 1)."""
     if reference_documents is not None:
         reference_text = reference_documents.get(name)
         reference_label = "the reference input"
@@ -263,7 +272,7 @@ def _check_new_access(
         else:
             logger.warning(f"{missing}; skipping CheckNoNewAccess for {name}")
             _record(result, CHECK_NO_NEW_ACCESS, SKIPPED, missing)
-        return
+        return 0
 
     logger.info(f"Checking {name} grants no new access compared to {reference_label}...")
     response = client.check_no_new_access(
@@ -272,6 +281,7 @@ def _check_new_access(
         policyType=api_type,
     )
     _record_response(result, CHECK_NO_NEW_ACCESS, response)
+    return 1
 
 
 def _record_response(result: dict[str, Any], code: str, response: dict[str, Any]) -> None:

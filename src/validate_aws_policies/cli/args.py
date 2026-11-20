@@ -161,7 +161,9 @@ Examples:
     checks = parser.add_argument_group(
         "custom policy checks",
         "Extra IAM Access Analyzer checks for identity and resource policies. "
-        "A failed check is reported as an ERROR finding and exits with code 1.",
+        "A failed check is reported as an ERROR finding and exits with code 1. "
+        "AWS bills these checks per API call (about one call per policy and check, "
+        "even with --dry-run); policy validation itself is free.",
     )
     checks.add_argument(
         "--check-no-new-access",

@@ -53,7 +53,9 @@
 | `--continue-on-error` | Validate everything and report, then exit 1 on any ERROR |
 | `--fail-on LEVEL` | `error`, `security-warning`, `warning`, `suggestion`, `none`. Implies `--continue-on-error`. |
 
-### Custom policy checks
+### Custom policy checks (billed per API call)
+
+AWS bills each check call. See [what custom checks cost](access-analyzer-features.md#what-custom-checks-cost).
 
 | Option | Description |
 |---|---|

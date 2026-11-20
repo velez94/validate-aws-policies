@@ -51,8 +51,10 @@ aws sso login --profile my-profile
 
 The credentials need `access-analyzer:ValidatePolicy`. Custom checks need
 `access-analyzer:CheckNoNewAccess`, `CheckAccessNotGranted` and `CheckNoPublicAccess`, and
-`--upload` needs `s3:PutObject`. Policy validation is free. Custom checks are billed per API
-call, see the [pricing page](https://aws.amazon.com/iam/access-analyzer/pricing/).
+`--upload` needs `s3:PutObject`. Policy validation is free. **Custom checks are billed per API
+call** (about one per policy and check, also with `--dry-run`) and are off unless you pass a
+`--check-*` option. See [what they cost](https://velez94.github.io/validate-aws-policies/access-analyzer-features/#what-custom-checks-cost)
+and the [pricing page](https://aws.amazon.com/iam/access-analyzer/pricing/).
 
 ## Quick start
 

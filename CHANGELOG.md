@@ -8,7 +8,13 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 <!-- insertion marker -->
 ## [Unreleased]
 
+### Added
+
+- When custom policy checks are enabled the tool logs a notice that AWS bills each check call, and at the end how many billed API calls it made. `--help` says the same. `run_policy_checks()` returns the number of calls.
+
 ### Changed
+
+- Documentation: a section on what custom checks cost (calls per option, an example, how to keep it low, and that `--dry-run` is still billed).
 
 - The documentation site is built with Zensical (`modern` theme) instead of Material for MkDocs. The `docs` extra installs `zensical` instead of `mkdocs` and `mkdocs-material`.
 

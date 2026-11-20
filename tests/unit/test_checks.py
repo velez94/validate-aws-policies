@@ -436,8 +436,7 @@ class TestValidatePoliciesOptions:
         stub = Stubber(client)
         # 6 pages of 20 findings: more than the 100-finding cap the tool used to apply
         pages = [
-            {"findings": [dict(finding) for _ in range(20)], "nextToken": f"t{i}"}
-            for i in range(5)
+            {"findings": [dict(finding) for _ in range(20)], "nextToken": f"t{i}"} for i in range(5)
         ]
         pages.append({"findings": [dict(finding) for _ in range(20)]})
         for page in pages:
@@ -495,3 +494,59 @@ class TestValidatePoliciesOptions:
         with stub:
             result = validate_policies(["sub/n.json"], tmp_path, client=client)
         assert result[0]["filePolicy"] == "sub/n.json"
+
+
+class TestBilledCallCount:
+    """run_policy_checks returns how many billed API calls it made."""
+
+    def test_counts_each_call(self, client, policies):
+        stub = Stubber(client)
+        stub.add_response(
+            "check_no_new_access",
+            {"result": "PASS", "message": "", "reasons": []},
+            {
+                "existingPolicyDocument": DOC,
+                "newPolicyDocument": DOC,
+                "policyType": "IDENTITY_POLICY",
+            },
+        )
+        stub.add_response(
+            "check_access_not_granted",
+            {"result": "PASS", "message": "", "reasons": []},
+            {
+                "policyDocument": DOC,
+                "access": [{"actions": ["iam:*"]}],
+                "policyType": "IDENTITY_POLICY",
+            },
+        )
+        with stub:
+            calls = run_policy_checks(
+                [clean_result()],
+                policies,
+                "identity",
+                {
+                    "check_no_new_access": True,
+                    "reference_path": str(policies / "ref"),
+                    "check_access_not_granted": True,
+                    "deny_actions": ["iam:*"],
+                },
+                client=client,
+            )
+        assert calls == 2
+
+    def test_skipped_policies_cost_nothing(self, client, policies):
+        (policies / "ref" / "a.json").unlink()
+        with Stubber(client):  # an API call would raise
+            calls = run_policy_checks(
+                [clean_result()],
+                policies,
+                "identity",
+                {"check_no_new_access": True, "reference_path": str(policies / "ref")},
+                client=client,
+            )
+        assert calls == 0
+
+    def test_nothing_requested_or_unsupported_type_is_zero(self, client, policies):
+        assert run_policy_checks([clean_result()], policies, "identity", {}) == 0
+        config = {"check_access_not_granted": True, "deny_actions": ["a:b"]}
+        assert run_policy_checks([clean_result()], policies, "scp", config) == 0

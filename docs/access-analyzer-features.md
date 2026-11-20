@@ -55,17 +55,58 @@ Severity order: `ERROR` > `SECURITY_WARNING` > `WARNING` > `SUGGESTION`.
 Custom policy checks use automated reasoning to test a policy against your own security
 standard. They apply to **identity and resource policies only** (not SCPs or RCPs).
 
-!!! warning "Cost"
-    Policy validation is free. Custom policy checks are billed per API call
-    (USD 0.0020 per call at the time of writing, see the
-    [pricing page](https://aws.amazon.com/iam/access-analyzer/pricing/)). One call is made per
-    policy per enabled check.
+!!! warning "Custom checks are billed by AWS"
+    Policy validation is free. Each custom check is an API call that AWS bills (USD 0.0020 per
+    call when this page was written, see the
+    [pricing page](https://aws.amazon.com/iam/access-analyzer/pricing/)). Checks are **off by
+    default** and run only when you pass a `--check-*` option. See
+    [what custom checks cost](#what-custom-checks-cost) before you add them to a pipeline.
 
 !!! info "IAM permissions"
     `access-analyzer:ValidatePolicy` for validation, plus
     `access-analyzer:CheckNoNewAccess`, `access-analyzer:CheckAccessNotGranted` and
     `access-analyzer:CheckNoPublicAccess` for the corresponding checks.
     Uploads additionally need `s3:PutObject`.
+
+### What custom checks cost
+
+The tool makes one API call per policy for each check you enable:
+
+| Option | Billed calls |
+|---|---|
+| `--check-no-new-access` | 1 per policy that has a baseline. A policy without a baseline is skipped and costs nothing. |
+| `--check-access-not-granted` | 1 per policy |
+| `--check-no-public-access` | 1 per resource policy. With [IaC inputs](iac.md) only policies of the matching resource type are checked. |
+
+Things that do **not** cost anything: policy validation itself, policies that already have an
+`ERROR` finding (they are not checked), and SCP or RCP policies (checks do not support them).
+
+Things that do **not** save anything: `--dry-run` skips writing reports and uploads, but the
+checks still run and are billed.
+
+**Example.** 40 policies with `--check-no-new-access` and `--check-access-not-granted` make
+40 x 2 = 80 calls, USD 0.16 per run. A pipeline that runs on 200 pull requests a month costs
+about USD 32. The same pipeline with `--only-changed`, where 5 policies change per pull request,
+costs about USD 4. Use the pricing page for current prices, and your own policy counts.
+
+**The tool tells you.** When checks are enabled it logs a notice at the start and the number of
+billed calls at the end:
+
+```text
+Custom policy checks are enabled. AWS bills each check API call (about one per policy and check); policy validation is free.
+...
+Custom policy checks made 3 billed API calls (https://aws.amazon.com/iam/access-analyzer/pricing/)
+```
+
+`--quiet` hides these lines. In AWS, the charges appear under Access Analyzer in Billing and
+Cost Explorer.
+
+**Keep it low:**
+
+- Run validation (free) on every push and the checks only in the pull request job.
+- Use `--only-changed` with Terraform or Pulumi plans so unchanged policies are not checked.
+- Enable only the checks you need, and prefer a short baseline of the policies that matter.
+- Check the number of calls on a small input first.
 
 ### Check for new access
 
