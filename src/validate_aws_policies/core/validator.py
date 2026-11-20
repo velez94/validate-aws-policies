@@ -381,9 +381,11 @@ class PolicyValidator:
                 for finding in summary:
                     finding_type = finding.get("findingType", "Unknown")
                     issue_code = finding.get("issueCode", "N/A")
-                    lines.append(f"  - {finding_type}: {issue_code}")
                     if finding_type == "None":
+                        # The placeholder entry of a policy without findings
+                        lines.append("  No findings")
                         continue
+                    lines.append(f"  - {finding_type}: {issue_code}")
                     details = finding.get("details")
                     if isinstance(details, dict) and details.get("findingDetails"):
                         lines.append(f"      {details['findingDetails']}")

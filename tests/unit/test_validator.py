@@ -173,3 +173,23 @@ class TestUploadFailure:
             v.report_generator, "create_html_report", return_value=Path("r.html")
         ), patch(f"{MODULE}.upload_file", return_value=False):
             assert v.run() == EXIT_AWS_ERROR
+
+
+class TestTextOutputWithoutFindings:
+    def test_clean_policy_prints_no_findings(self, policies_dir):
+        placeholder = {
+            "filePolicy": "clean.json",
+            "summary": [
+                {
+                    "policyName": "clean",
+                    "issueCode": "None",
+                    "findingType": "None",
+                    "details": "No findings",
+                }
+            ],
+        }
+        text = make(policies_dir)._format_text_output([placeholder, *RESULTS])
+        assert "Policy: clean.json\n  No findings" in text
+        assert "None: None" not in text
+        # policies with findings keep the finding line
+        assert "  - WARNING: X" in text

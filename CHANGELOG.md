@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
 <!-- insertion marker -->
+## [4.0.1]
+
+### Changed
+
+- Text output (`--format text`) prints `No findings` for a policy without findings. It printed `- None: None`. JSON, Markdown, HTML, JUnit and SARIF output are unchanged. Scripts that parse the text output for `None: None` need to look for `No findings`.
+- Documentation: new demo recording and GIF for 4.x.
+
 ## [4.0.0]
 
 ### Breaking changes

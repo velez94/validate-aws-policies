@@ -112,6 +112,9 @@ Policy: my-policy.json
       Using wildcards (*) in the action and the resource can be overly permissive ...
       at line 9, column 9
       https://docs.aws.amazon.com/IAM/latest/UserGuide/access-analyzer-reference-policy-checks.html#...
+
+Policy: s3-read.json
+  No findings
 ```
 
 ## Failure handling and exit codes
