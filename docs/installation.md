@@ -68,7 +68,7 @@ pip install --upgrade boto3 botocore
 git clone https://github.com/velez94/validate-aws-policies.git
 cd validate-aws-policies
 pip install -e ".[dev]"      # tests, ruff, mypy
-pip install -e ".[docs]"     # mkdocs, to build this site
+pip install -e ".[docs]"     # zensical, to build this site
 ```
 
 ## AWS prerequisites

@@ -232,7 +232,7 @@ echo 'eval "$(register-python-argcomplete validate-aws-policies)"' >> ~/.bashrc 
 git clone https://github.com/velez94/validate-aws-policies.git
 cd validate-aws-policies
 pip install -e ".[dev,docs]"
-pytest && ruff check src && mkdocs build --strict
+pytest && ruff check src && zensical build --strict
 ```
 
 See the [development guide](https://velez94.github.io/validate-aws-policies/development/) for

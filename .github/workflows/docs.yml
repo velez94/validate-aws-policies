@@ -31,8 +31,8 @@ jobs:
         with:
           python-version: "3.12"
       - run: pip install -e ".[docs]"
-      # Fails on broken links, missing files and bad snippets
-      - run: mkdocs build --strict
+      # Fails on broken links and anchors, missing files and bad snippets
+      - run: zensical build --clean --strict
       - uses: actions/upload-pages-artifact@v3
         with:
           path: site

@@ -63,7 +63,7 @@ Build the extraction layer and plug it into the existing pipeline. Terraform fir
   - [x] 7.1 New docs page `iac.md` (per-tool commands, mapping tables, unknown values, baseline, CI examples) and nav entry
   - [x] 7.2 Update README, usage, configuration, API reference, examples, CHANGELOG (Unreleased)
   - [x] 7.3 Update steering docs (structure, tech, product)
-  - [x] 7.4 `mkdocs build --strict` passes
+  - [x] 7.4 the docs build in strict mode passes (`zensical build --strict` since the move from MkDocs)
 
 ## Out of scope
 

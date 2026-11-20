@@ -3,6 +3,7 @@ site_description: 'Validate AWS policies using IAM Access Analyzer API'
 site_author: 'Alejandro Velez'
 repo_url: https://github.com/velez94/validate-aws-policies
 repo_name: velez94/validate-aws-policies
+copyright: Copyright &copy; 2026 Alejandro Velez. Apache License 2.0
 site_url: https://velez94.github.io/validate-aws-policies/
 edit_uri: edit/main/docs/
 
@@ -28,7 +29,7 @@ validation:
   anchors: warn
 
 theme:
-  name: material
+  variant: modern
   palette:
     - scheme: default
       primary: indigo
@@ -50,6 +51,9 @@ theme:
     - search.suggest
     - search.highlight
     - content.code.copy
+    - content.tabs.link
+    - navigation.footer
+    - toc.follow
 
 markdown_extensions:
   - pymdownx.highlight:
@@ -69,3 +73,12 @@ markdown_extensions:
 
 plugins:
   - search
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/velez94/validate-aws-policies
+      name: Source code on GitHub
+    - icon: fontawesome/brands/python
+      link: https://pypi.org/project/validate-aws-policies/
+      name: validate-aws-policies on PyPI

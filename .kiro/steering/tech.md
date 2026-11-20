@@ -5,7 +5,7 @@
 - Python >= 3.9 (ruff target `py39`, mypy `python_version = 3.10` because mypy no longer supports older targets). Use built-in generics (`list[str]`); do not use `X | Y` unions (3.10+). boto3 floor is `>=1.36.0` (a release that has RCP, verified at 1.36.0 and absent at 1.35.0; the three custom checks exist earlier).
 - Build: hatchling, `src/` layout. Publish: GitHub Actions `publish.yml` on `v*` tags (build with hatch, TestPyPI, PyPI, Sigstore, GitHub release).
 - Runtime deps: boto3, colorama, json2html, zipp, argcomplete, pyyaml, tomli (only for Python < 3.11).
-- Dev extras (`pip install -e ".[dev]"`): pytest, pytest-cov, pytest-mock, moto, ruff, mypy, types-pyyaml. Docs extras: mkdocs, mkdocs-material.
+- Dev extras (`pip install -e ".[dev]"`): pytest, pytest-cov, pytest-mock, moto, ruff, mypy, types-pyyaml. Docs extra: zensical (the docs site is built with Zensical, `modern` variant, configured in `mkdocs.yml`).
 
 ## Commands
 
@@ -15,7 +15,7 @@ pytest                      # coverage and --cov-fail-under=80 are enforced in a
 ruff check . && ruff format .
 mypy src/                   # strict-ish: disallow_untyped_defs is on for src
 pre-commit run --all-files
-mkdocs serve                # docs; use `mkdocs build --strict` before committing doc changes
+zensical serve               # docs; use `zensical build --strict` before committing doc changes
 ```
 
 ## Code conventions

@@ -16,8 +16,8 @@ pre-commit install            # optional
 pytest                        # unit tests, enforces 80% coverage
 ruff check src               # lint
 mypy src --ignore-missing-imports
-mkdocs serve                  # docs at http://127.0.0.1:8000
-mkdocs build --strict         # fails on broken links and missing files
+zensical serve                # docs at http://127.0.0.1:8000
+zensical build --strict       # fails on broken links, anchors and missing files
 ```
 
 The GitHub Actions workflow `test.yml` runs lint and tests on Python 3.9 to 3.14 for every
@@ -55,14 +55,16 @@ docs/                      this site
 
 ## Documentation
 
-The site is built with [MkDocs Material](https://squidfunk.github.io/mkdocs-material/) from
+The site is built with [Zensical](https://zensical.org/) (the `modern` theme variant) from
 `docs/` and published to GitHub Pages by `.github/workflows/docs.yml` on every push to
 `main` that changes the docs.
 
 - The changelog page includes `CHANGELOG.md` from the repository root. Edit that file.
 - `docs/assets/sample-report.html` is a real report. Regenerate it after changing the HTML
   report: run the tool with `--format html` and copy the file.
-- `mkdocs build --strict` must pass before you open a pull request.
+- `zensical build --strict` must pass before you open a pull request. The configuration is
+  `mkdocs.yml`, which Zensical reads; the file name is kept so a move to `zensical.toml` stays
+  optional.
 
 ### One-time GitHub setup
 
@@ -79,7 +81,7 @@ The site is then at <https://velez94.github.io/validate-aws-policies/>.
 
 1. Update `CHANGELOG.md` (move items from *Unreleased* to the new version).
 2. Set the same version in `pyproject.toml` and `src/validate_aws_policies/version.py`.
-3. Run the tests and `mkdocs build --strict`.
+3. Run the tests and `zensical build --strict`.
 4. Commit, then tag and push: `git tag -a vX.Y.Z -m "vX.Y.Z" && git push origin main vX.Y.Z`.
 
 Pushing a `v*` tag runs `publish.yml`: build, TestPyPI, PyPI, Sigstore signing and a GitHub
