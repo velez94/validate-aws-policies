@@ -10,7 +10,9 @@ JSON files to [IAM Access Analyzer](https://docs.aws.amazon.com/IAM/latest/UserG
 optionally runs Access Analyzer custom policy checks, and writes the results as JSON, text, HTML,
 Markdown, JUnit XML or SARIF.
 
-![Validation demo](https://raw.githubusercontent.com/velez94/validate-aws-policies/main/docs/img/rec_validate.gif)
+[![Demo: policy files, Terraform, CloudFormation and custom checks](https://raw.githubusercontent.com/velez94/validate-aws-policies/main/docs/img/demo.gif)](https://asciinema.org/a/F8CKsaeKVCTByd83)
+
+<sub>Demo of version 4.0 on a real AWS account. [Play it on asciinema.org](https://asciinema.org/a/F8CKsaeKVCTByd83) to pause and copy text.</sub>
 
 **Documentation:** <https://velez94.github.io/validate-aws-policies/>
 &middot; [Sample HTML report](https://velez94.github.io/validate-aws-policies/assets/sample-report.html)

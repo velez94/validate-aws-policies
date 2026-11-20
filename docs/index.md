@@ -52,7 +52,16 @@ validate-aws-policies -d ./policies --check-no-new-access --reference-path ./bas
 
 ## Example output
 
-![Validation example](img/rec_validate.gif)
+<script src="https://asciinema.org/a/F8CKsaeKVCTByd83.js" id="asciicast-F8CKsaeKVCTByd83" async data-rows="34" data-speed="1.5" data-idle-time-limit="2" data-theme="monokai"></script>
+<noscript>
+
+[![Demo](img/demo.gif)](https://asciinema.org/a/F8CKsaeKVCTByd83)
+
+</noscript>
+
+The recording runs version 4.0 against a real AWS account: policy files, policy types, a
+Terraform plan, a CloudFormation template, custom checks and reports. You can pause it and
+copy text, or [open it on asciinema.org](https://asciinema.org/a/F8CKsaeKVCTByd83).
 
 Open the [sample HTML report](assets/sample-report.html) to see the report format.
 
