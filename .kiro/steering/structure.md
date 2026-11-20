@@ -32,18 +32,18 @@ src/validate_aws_policies/
 
 tests/
 ├── conftest.py                   # shared fixtures (policy dicts, fixtures dirs)
-├── unit/                         # test_args, test_args_integration, test_checks, test_iac_pipeline, test_sources, test_config, test_config_precedence, test_iam_access_analyzer, test_main, test_main_flow, test_new_features, test_reports, test_upload_retry, test_validator
+├── unit/                         # one test_<area>.py per module or feature (args, config, checks, sources, iac_pipeline, validator, reports, ...)
 ├── integration/                  # empty
 └── fixtures/{sample_policies,config_files,iac}   # iac: real Terraform/OpenTofu plans, CFN templates, Pulumi JSON (see its README)
 
 scripts/validate_junit_xml.py     # manual CodeBuild JUnit XML validator
-docs/                             # mkdocs site: index, installation, usage, configuration, access-analyzer-features, examples, codebuild, JUNIT_XML_REPORT, api, development, changelog (includes CHANGELOG.md), assets/sample-report.html
+docs/                             # Zensical site (config: mkdocs.yml): index, installation, usage, configuration, access-analyzer-features, examples, codebuild, JUNIT_XML_REPORT, api, development, changelog (includes CHANGELOG.md), assets/sample-report.html
 examples/policies/                # sample policy JSON
 config.example.{yaml,toml}        # sample config files
 .github/workflows/publish.yml     # release pipeline
 .github/workflows/test.yml        # ruff, mypy, pytest on Python 3.9-3.14 and a floor job (3.9 + boto3 1.36.0)
 .github/workflows/docs.yml        # zensical build --strict, deploy to GitHub Pages from main
-.kiro/specs/cli-developer-improvements/   # requirements, design, tasks for the 3.x CLI modernization
+.kiro/specs/cli-developer-improvements/   # requirements, design, tasks for the 3.x CLI modernization (done)
 .kiro/specs/access-analyzer-modernization/ # plan for adopting new Access Analyzer APIs
 .kiro/specs/iac-policy-extraction/        # requirements, design, tasks for Terraform/CloudFormation/Pulumi inputs
 ```
@@ -68,8 +68,8 @@ With `--input`, `PolicyValidator._run_iac()` replaces steps 1-2: `sources.extrac
 - New config key or env var: `cli/config.py` (`_load_defaults`, `ENV_VAR_MAP`).
 - New IaC resource type: one `MapEntry` in `sources/resource_maps.py` plus a test; no extractor code.
 - New output format: `ops/reports.py` method, wire it in `PolicyValidator._generate_reports`, add the choice and extension to `--format` in `cli/args.py`, and add tests.
-- New Access Analyzer API call: feature-detect it in `iam_access_analyzer/features.py`, add Stubber-based tests, and keep the boto3 floor unchanged.
+- New Access Analyzer API call or value: feature-detect it in `iam_access_analyzer/features.py` and add Stubber-based tests. Raising the boto3 floor is a breaking change (major version).
 - Version bump: `pyproject.toml`, `version.py`, `CHANGELOG.md`.
-- Docs: every user-visible change updates `docs/` and `CHANGELOG.md`; `mkdocs build --strict` must pass (it validates links and anchors). Regenerate `docs/assets/sample-report.html` when the HTML report changes.
+- Docs: every user-visible change updates `docs/` and `CHANGELOG.md`; `zensical build --strict` must pass (it validates links and anchors). Regenerate `docs/assets/sample-report.html` when the HTML report changes.
 - New exit code: `cli/exit_codes.py` plus docs; keep existing values.
 - Release: bump `pyproject.toml` and `version.py`, update `CHANGELOG.md`, push a `vX.Y.Z` tag.

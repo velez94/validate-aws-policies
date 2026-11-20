@@ -53,6 +53,14 @@ docs/                      this site
 - **HTML report:** escape every value that comes from a policy or from the API. The report
   must stay one self-contained file with no external requests.
 
+## Kiro specs and steering
+
+The `.kiro/` folder is part of the repository. `.kiro/steering/` has short project facts that
+Kiro loads in every session (product, tech, structure), and `.kiro/specs/` has the requirements,
+design and tasks of larger changes. Keep the steering files accurate when behavior, versions or
+the layout change, because they are always loaded as context. Never commit `.kiro/settings/`
+(MCP servers and tokens); it is ignored by `.gitignore`.
+
 ## Documentation
 
 The site is built with [Zensical](https://zensical.org/) (the `modern` theme variant) from
